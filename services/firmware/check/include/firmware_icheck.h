@@ -187,7 +187,7 @@ private:
         SSL_shutdown(ssl);
         SSL_free(ssl);
         SSL_CTX_free(sslCtx);
-        FIRMWARE_LOGI("ReadDataFromSSL errMsg: %s, result: %d", errMsg.c_str(), result);
+        FIRMWARE_LOGI("ReadDataFromSSL errMsg: %{public}s, result: %{public}d", errMsg.c_str(), result);
         return result == SearchStatus::HAS_NEW_VERSION ? 0 : -1;
     }
 
