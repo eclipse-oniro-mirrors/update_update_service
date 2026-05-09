@@ -92,7 +92,7 @@ int32_t ModuleManager::HandleFunc(uint32_t code, MessageParcel &data, MessagePar
         UTILS_LOGI("code %{public}d not exist", code);
     } else {
         UTILS_LOGI("code %{public}d called", code);
-        return ((RequestFuncType)onRemoteRequestFuncMap_[code])(code, data, reply, option);
+        return static_cast<RequestFuncType>(onRemoteRequestFuncMap_[code])(code, data, reply, option);
     }
     return 0;
 }
@@ -122,7 +122,7 @@ void ModuleManager::HandleOnStartOnStopFunc(std::string phase, const OHOS::Syste
         return;
     }
     UTILS_LOGI("HandleOnStartOnStopFunc phase %{public}s exist", phase.c_str());
-    ((LifeCycleFuncType)onStartOnStopFuncMap_[phase])(reason);
+    static_cast<LifeCycleFuncType>(onStartOnStopFuncMap_[phase])(reason);
 }
 
 void ModuleManager::HookOnIdleFunc(std::string phase, LifeCycleFuncReturnType handleSAOnIdle)
@@ -142,7 +142,7 @@ int32_t ModuleManager::HandleOnIdleFunc(std::string phase, const OHOS::SystemAbi
         UTILS_LOGI("phase %{public}s not exist", phase.c_str());
     } else {
         UTILS_LOGI("phase %{public}s already exist", phase.c_str());
-        return ((LifeCycleFuncReturnType)onIdleFuncMap_[phase])(reason);
+        return static_cast<LifeCycleFuncReturnType>(onIdleFuncMap_[phase])(reason);
     }
     return 0;
 }
@@ -164,7 +164,7 @@ int ModuleManager::HandleDumpFunc(std::string phase, int fd, const std::vector<s
         UTILS_LOGI("phase %{public}s not exist", phase.c_str());
     } else {
         UTILS_LOGI("phase %{public}s already exist", phase.c_str());
-        return ((LifeCycleFuncDumpType)onDumpFuncMap_[phase])(fd, args);
+        return static_cast<LifeCycleFuncDumpType>(onDumpFuncMap_[phase])(fd, args);
     }
     return 0;
 }
