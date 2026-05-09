@@ -70,7 +70,8 @@ static int32_t ExecReset(BusinessError &businessError, bool forceFlag)
 static int32_t ExecuteDeepReset(BusinessError &businessError, const FactoryResetStrategy factoryResetStrategy)
 {
     const std::string eraseType = (factoryResetStrategy.scope == FactoryResetScope::DATA) ? "DATA" : "DATA_AND_OS";
-    bool result = RebootAndSecureErase(eraseType);
+    const std::string paramData = CMD_WIPE_DATA + "\n--reset_enter:deepFactoryReset|"  + GetCallingAppId();
+    bool result = RebootAndSecureErase(eraseType, paramData);
     ENGINE_LOGI("ExecuteDeepReset: %{public}s", StringUtils::GetBoolStr(result).c_str());
     return result ? INT_CALL_SUCCESS : INT_CALL_FAIL;
 }
