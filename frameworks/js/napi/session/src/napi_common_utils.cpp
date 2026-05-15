@@ -233,6 +233,18 @@ void NapiCommonUtils::NapiThrowNotSystemAppError(napi_env env)
     PARAM_CHECK(status == napi_ok, return, "Failed to napi_throw %{public}d", CAST_INT(status));
 }
 
+void NapiCommonUtils::NapiThrowUnSupportError(napi_env env)
+{
+    BusinessError businessError;
+    CallResult errCode = CallResult::UN_SUPPORT;
+    std::string errMsg = "BusinessError " + std::to_string(CAST_INT(errCode))
+        .append(": Capability not supported. Failed to call the API due to limited device capabilities.");
+    businessError.Build(errCode, errMsg);
+    napi_value msg = BuildThrowError(env, businessError);
+    napi_status status = napi_throw(env, msg);
+    PARAM_CHECK(status == napi_ok, return, "Failed to napi_throw %{public}d", CAST_INT(status));
+}
+
 void NapiCommonUtils::NapiThrowPermissionError(napi_env env)
 {
     BusinessError businessError;

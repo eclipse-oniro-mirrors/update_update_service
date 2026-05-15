@@ -26,4 +26,8 @@ declare_args() {
   if (!defined(global_parts_info.communication_netmanager_base)) {
     communication_netmanager_base_enable = false
   }
+  update_service_car_unique = false
+  if (defined(global_parts_info.update_service_car_unique)) {
+    update_service_car_unique = true
+  }
 }
