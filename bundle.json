@@ -16,7 +16,7 @@
       "SystemCapability.Update.UpdateService"
     ],
     "features": [
-      "update_service_car_unique",
+      "update_service_disable_online_updater",
       "update_service_dupdate_config_path",
       "update_service_enable_run_on_demand_qos",
       "update_service_updater_sa_cfg_path",
