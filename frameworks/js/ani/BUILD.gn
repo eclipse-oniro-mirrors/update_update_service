@@ -85,6 +85,10 @@ taihe_shared_library("update_ani") {
   ]
   deps = ani_deps
   external_deps = ani_external_deps
+  defines = []
+  if (update_service_disable_online_updater) {
+    defines += [ "UPDATE_SERVICE_DISABLE_ONLINE_UPDATER" ]
+  }
 }
 
 generate_static_abc("update_framework_abc") {
