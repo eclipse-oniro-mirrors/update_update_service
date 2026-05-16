@@ -26,8 +26,8 @@ declare_args() {
   if (!defined(global_parts_info.communication_netmanager_base)) {
     communication_netmanager_base_enable = false
   }
-  update_service_disable_online_updater = false
-  if (defined(global_parts_info.update_service_disable_online_updater)) {
-    update_service_disable_online_updater = true
+  update_service_online_updater = false
+  if (defined(global_parts_info.update_service_online_updater)) {
+    update_service_online_updater = true
   }
 }
