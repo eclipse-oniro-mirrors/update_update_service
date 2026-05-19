@@ -172,7 +172,7 @@ bool FirmwareCheckAnalyzeUtils::IsValidFileName(const std::string &fileName)
         }
     }
 
-    static constexpr std::string_view specialChars = "<>:\"|?* ";
+    const std::string specialChars = "<>:\"|?* \t\n\r";
     const auto invalidCharsPos = fileName.find_first_of(specialChars);
     if (invalidCharsPos != std::string::npos) {
         FIRMWARE_LOGE("FileName contains invalid chars %{public}s", fileName.c_str());
