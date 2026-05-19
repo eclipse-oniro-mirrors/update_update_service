@@ -164,19 +164,16 @@ bool FirmwareCheckAnalyzeUtils::IsValidFileName(const std::string &fileName)
         return false;
     }
 
-    if (fileName.find("..") != std::string::npos) {
-        FIRMWARE_LOGE("FileName contains path traversal");
-        return false;
+    static constexpr std::string_view invalidPattens[] = { "..", "/", "\\"};
+    for (const auto &pattern : invalidPattens) {
+        if (fileName.find(pattern) != std::string::npos) {
+            FIRMWARE_LOGE("Invalid file name");
+            return false;
+        }
     }
 
-    const auto separatorPos = fileName.find_first_of("/\\");
-    if (separatorPos != std::string::npos) {
-        FIRMWARE_LOGE("FileName contains path separator: %{public}s", fileName.c_str());
-        return false;
-    }
-
-    const std::string invalidChars = "<>:\"|?* ";
-    const auto invalidCharsPos = fileName.find_first_of(invalidChars);
+    static constexpr std::string_view specialChars = "<>:\"|?* ";
+    const auto invalidCharsPos = fileName.find_first_of(specialChars);
     if (invalidCharsPos != std::string::npos) {
         FIRMWARE_LOGE("FileName contains invalid chars %{public}s", fileName.c_str());
         return false;
