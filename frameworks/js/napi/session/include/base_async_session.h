@@ -37,6 +37,19 @@ public:
         callbackRef_.clear();
     }
 
+    void  ReleaseNapiReference(napi_env env)
+    {
+        for (size_t i = 0; i < callbackNumber_; i++) {
+            if (callbackRef_[i] != nullptr) {
+                napi_status status = napi_delete_reference(env, callbackRef_[i]);
+                if (status != napi_ok) {
+                    ENGINE_LOGE("callbackRef %{public}zu release failed", i);
+                }
+                callbackRef_[i] = nullptr;
+            }
+        }
+    }
+
     napi_value StartWork(napi_env env, size_t startIndex, const napi_value *args) override
     {
         ENGINE_LOGI("BaseAsyncSession::StartWork startIndex: %{public}zu totalArgc_ %{public}zu "
@@ -65,11 +78,13 @@ public:
         status = napi_create_async_work(env, nullptr, workName, NapiSession::ExecuteWork, NapiSession::CompleteWork,
             this, &(worker_));
 
-        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, return nullptr, "Failed to create worker");
+        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, ReleaseNapiReference(env);return nullptr,
+            "Failed to create worker");
 
         // Put the thread in the task execution queue.
         status = napi_queue_async_work_with_qos(env, worker_, napi_qos_default);
-        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, return nullptr, "Failed to queue worker");
+        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, ReleaseNapiReference(env);return nullptr,
+            "Failed to queue worker");
         napi_value result;
         napi_create_int32(env, 0, &result);
         return result;
@@ -107,10 +122,7 @@ public:
         PARAM_CHECK_NAPI_CALL(env, retStatus == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to call function");
         // Release resources.
-        for (size_t i = 0; i < callbackNumber_; i++) {
-            napi_delete_reference(env, callbackRef_[i]);
-            callbackRef_[i] = nullptr;
-        }
+        ReleaseNapiReference(env);
         napi_delete_async_work(env, worker_);
         worker_ = nullptr;
         napi_close_handle_scope(env, scope);

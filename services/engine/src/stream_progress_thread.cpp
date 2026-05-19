@@ -39,7 +39,7 @@ int32_t StreamProgressThread::StartDownload(const std::string &url, const int64_
     downloadedSize_ = recordPoint;
     totalFileSize_ = size;
     bufferPos_ = 0;
-    isCancel_ = false;
+    isCancel_.store(false);
     exitDownload_ = false;
     (void)memset_s(buffer_, BUFFER_SIZE, 0, BUFFER_SIZE);
     curl_global_init(CURL_GLOBAL_ALL);
@@ -224,7 +224,7 @@ bool StreamProgressThread::DealExitOrCancel()
         ENGINE_LOGI("DealExitOrCancel exit Download");
         return true;
     }
-    if (isCancel_) {
+    if (isCancel_.load()) {
         ENGINE_LOGI("DealExitOrCancel install task cancel");
         return true;
     }

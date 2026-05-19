@@ -35,7 +35,7 @@
 
 namespace OHOS {
 namespace UpdateService {
-const mode_t MKDIR_MODE = 0777;
+const mode_t MKDIR_MODE = 0770;
 void FirmwareDownloadExecutor::Execute()
 {
     FIRMWARE_LOGI("FirmwareDownloadExecutor::Execute");

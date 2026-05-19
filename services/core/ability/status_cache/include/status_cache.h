@@ -16,6 +16,7 @@
 #ifndef STATUS_CACHE_H
 #define STATUS_CACHE_H
 
+#include <atomic>
 #include <cstdint>
 
 #include "time_utils_proxy.h"
@@ -36,10 +37,10 @@ private:
 
 private:
     std::shared_ptr<TimeUtilsProxy> timeUtilsProxy_ = nullptr;
-    bool isChecking_ = false;
-    int64_t lastCheckTime_ = -1;
-    int64_t lastDownloadTime_ = -1;
-    int64_t lastUpgradeTime_ = -1;
+    std::atomic<bool> isChecking_ = false;
+    std::atomic<int64_t> lastCheckTime_ = -1;
+    std::atomic<int64_t> lastDownloadTime_ = -1;
+    std::atomic<int64_t> lastUpgradeTime_ = -1;
 };
 } // namespace UpdateService
 } // namespace OHOS

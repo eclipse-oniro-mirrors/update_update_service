@@ -45,8 +45,8 @@ class ProgressThread {
 public:
     ProgressThread() = default;
     virtual ~ProgressThread();
-    static bool isNoNet_;
-    static bool isCancel_;
+    static std::atomic<bool> isNoNet_;
+    static std::atomic<bool> isCancel_;
 protected:
     int32_t StartProgress();
     void StopProgress();

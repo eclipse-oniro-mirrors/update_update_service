@@ -27,8 +27,8 @@
 
 namespace OHOS {
 namespace UpdateService {
-bool ProgressThread::isNoNet_ = false;
-bool ProgressThread::isCancel_ = false;
+std::atomic<bool> ProgressThread::isNoNet_{false};
+std::atomic<bool> ProgressThread::isCancel_{false};
 
 ProgressThread::~ProgressThread() {}
 
@@ -241,14 +241,16 @@ size_t DownloadThread::GetLocalFileLength(const std::string &fileName)
 bool DownloadThread::DealAbnormal(uint32_t percent)
 {
     bool dealResult = false;
-    if (isNoNet_ || isCancel_) {
+    if (isNoNet_.load() || isCancel_.load()) {
         ENGINE_LOGI("No network or user cancel");
-        downloadProgress_.endReason = isNoNet_ ? std::to_string(CAST_INT(DownloadEndReason::NET_NOT_AVAILIABLE)) :
+        downloadProgress_.endReason = isNoNet_.load() ?
+            std::to_string(CAST_INT(DownloadEndReason::NET_NOT_AVAILIABLE)) :
             std::to_string(CAST_INT(DownloadEndReason::CANCEL));
         downloadProgress_.percent = percent;
-        downloadProgress_.status = isNoNet_ ? UpgradeStatus::DOWNLOAD_FAIL : UpgradeStatus::DOWNLOAD_CANCEL;
-        if (isCancel_) {
-            isCancel_ = false;
+        downloadProgress_.status = isNoNet_.load() ? UpgradeStatus::DOWNLOAD_FAIL :
+            UpgradeStatus::DOWNLOAD_CANCEL;
+        if (isCancel_.load()) {
+            isCancel_.store(false);
         }
         dealResult = true;
         if (callback_ != nullptr) {

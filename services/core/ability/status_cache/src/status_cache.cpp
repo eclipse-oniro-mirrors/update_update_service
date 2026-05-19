@@ -23,18 +23,19 @@ namespace OHOS {
 namespace UpdateService {
 bool StatusCache::IsChecking()
 {
-    if (lastCheckTime_ != -1 && abs(GetCurrentTime() - lastCheckTime_) > Constant::FIVE_MINUTES_SECONDS) {
+    if (lastCheckTime_.load() != -1 && abs(GetCurrentTime() - lastCheckTime_.load()) >
+        Constant::FIVE_MINUTES_SECONDS) {
         // 当前时间与上次检测时间间隔超过5分钟，允许再次触发搜包
         return false;
     }
-    return isChecking_;
+    return isChecking_.load();
 }
 
 void StatusCache::SetIsChecking(bool isChecking)
 {
-    isChecking_ = isChecking;
-    if (isChecking_) {
-        lastCheckTime_ = GetCurrentTime();
+    isChecking_.store(isChecking);
+    if (isChecking_.load()) {
+        lastCheckTime_.store(GetCurrentTime());
     }
 }
 
@@ -49,33 +50,33 @@ int64_t StatusCache::GetCurrentTime()
 
 bool StatusCache::IsDownloadTriggered()
 {
-    if (lastDownloadTime_ == -1) {
-        lastDownloadTime_ = TimeUtils::GetTimestampByMilliseconds();
+    if (lastDownloadTime_.load() == -1) {
+        lastDownloadTime_.store(TimeUtils::GetTimestampByMilliseconds());
         return false;
     }
 
-    if (abs(TimeUtils::GetTimestampByMilliseconds() - lastDownloadTime_) < Constant::MILLESECONDS) {
+    if (abs(TimeUtils::GetTimestampByMilliseconds() - lastDownloadTime_.load()) < Constant::MILLESECONDS) {
         // 当前时间与上次下载时间间隔小于1秒钟，不允许重复触发下载
         ENGINE_LOGI("interval time within one seconds");
         return true;
     }
-    lastDownloadTime_ = TimeUtils::GetTimestampByMilliseconds();
+    lastDownloadTime_.store(TimeUtils::GetTimestampByMilliseconds());
     return false;
 }
 
 bool StatusCache::IsUpgradeTriggered()
 {
-    if (lastUpgradeTime_ == -1) {
-        lastUpgradeTime_ = TimeUtils::GetTimestampByMilliseconds();
+    if (lastUpgradeTime_.load() == -1) {
+        lastUpgradeTime_.store(TimeUtils::GetTimestampByMilliseconds());
         return false;
     }
 
-    if (abs(TimeUtils::GetTimestampByMilliseconds() - lastUpgradeTime_) < Constant::MILLESECONDS) {
+    if (abs(TimeUtils::GetTimestampByMilliseconds() - lastUpgradeTime_.load()) < Constant::MILLESECONDS) {
         // 当前时间与上次下载时间间隔小于1秒钟，不允许重复触发下载
         ENGINE_LOGI("interval time within one seconds");
         return true;
     }
-    lastUpgradeTime_ = TimeUtils::GetTimestampByMilliseconds();
+    lastUpgradeTime_.store(TimeUtils::GetTimestampByMilliseconds());
     return false;
 }
 } // namespace UpdateService

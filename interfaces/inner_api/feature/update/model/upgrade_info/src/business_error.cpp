@@ -23,6 +23,10 @@ bool BusinessError::ReadFromParcel(Parcel &parcel)
     errorNum = static_cast<CallResult>(parcel.ReadInt32());
 
     int32_t errorMessageSize = parcel.ReadInt32();
+    if (errorMessageSize == 0) {
+        ENGINE_LOGE("error message size is zero");
+        return true;
+    }
     if ((errorMessageSize < MIN_VECTOR_SIZE) || (errorMessageSize > MAX_VECTOR_SIZE)) {
         ENGINE_LOGE("Invalid error message size =%{public}d", errorMessageSize);
         return false;

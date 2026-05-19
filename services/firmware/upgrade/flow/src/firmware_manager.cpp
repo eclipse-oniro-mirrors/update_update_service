@@ -162,7 +162,7 @@ void FirmwareManager::DoCancel(BusinessError &businessError)
         businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR), "no download task to cancel!");
         return;
     }
-    ProgressThread::isCancel_ = true;
+    ProgressThread::isCancel_.store(true);
     return;
 }
 
@@ -343,11 +343,11 @@ void FirmwareManager::HandleNetChanged()
     #ifdef NETMANAGER_BASE_ENABLE
     if (!DelayedSingleton<NetManager>::GetInstance()->IsNetAvailable()) {
         FIRMWARE_LOGE("HandleNetChanged network not available.");
-        ProgressThread::isNoNet_ = true;
+        ProgressThread::isNoNet_.store(true);
         return;
     }
 
-    ProgressThread::isNoNet_ = false;
+    ProgressThread::isNoNet_.store(false);
     FirmwareTask task;
     FirmwareTaskOperator().QueryTask(task);
     FIRMWARE_LOGI("HandleNetChanged status %{public}d", task.status);
