@@ -15,8 +15,6 @@
 
 #include "firmware_status_cache.h"
 
-#include <mutex>
-
 #include "firmware_log.h"
 #include "time_utils_proxy.h"
 

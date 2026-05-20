@@ -16,8 +16,9 @@
 #ifndef FIRMWARE_STATUS_CACHE_H
 #define FIRMWARE_STATUS_CACHE_H
 
-#include "singleton.h"
+#include <mutex>
 
+#include "singleton.h"
 #include "status_cache.h"
 
 namespace OHOS {
