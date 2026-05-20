@@ -106,6 +106,11 @@ napi_value JsConstructorLocalUpdater(napi_env env, napi_callback_info info)
 
 napi_value GetOnlineUpdater(napi_env env, napi_callback_info info)
 {
+#ifdef UPDATE_SERVICE_DISABLE_ONLINE_UPDATER
+    NapiCommonUtils::NapiThrowUnSupportError(env);
+    ENGINE_LOGI("Not support GetOnlineUpdater");
+    return nullptr;
+#endif
     bool isCallerValid = NapiCommonUtils::IsCallerValid();
     PARAM_CHECK_NAPI_CALL(env, isCallerValid, NapiCommonUtils::NapiThrowNotSystemAppError(env);
         return nullptr, "Failed to GetOnlineUpdater");

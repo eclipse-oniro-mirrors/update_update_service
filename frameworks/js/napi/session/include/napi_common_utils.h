@@ -52,6 +52,7 @@ public:
     static ClientStatus IsTypeOf(napi_env env, napi_value arg, napi_valuetype type);
     static void NapiThrowParamError(napi_env env, std::vector<std::pair<std::string, std::string>> &paramInfos);
     static void NapiThrowNotSystemAppError(napi_env env);
+    static void NapiThrowUnSupportError(napi_env env);
     static bool IsCallerValid();
     static bool IsPermissionGranted(const std::string &permission);
     static void NapiThrowPermissionError(napi_env env);

@@ -72,4 +72,9 @@ ohos_shared_library("$updateengine_client_library_name") {
     "-DNAPI_VERSION=8",
     "-fstack-protector-strong",
   ]
+
+  defines = []
+  if (!update_service_online_updater) {
+    defines += [ "UPDATE_SERVICE_DISABLE_ONLINE_UPDATER" ]
+  }
 }
