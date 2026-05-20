@@ -37,10 +37,10 @@ private:
 
 private:
     std::shared_ptr<TimeUtilsProxy> timeUtilsProxy_ = nullptr;
-    std::atomic<bool> isChecking_ = false;
-    std::atomic<int64_t> lastCheckTime_ = -1;
-    std::atomic<int64_t> lastDownloadTime_ = -1;
-    std::atomic<int64_t> lastUpgradeTime_ = -1;
+    bool isChecking_ = false;
+    int64_t lastCheckTime_ = -1;
+    int64_t lastDownloadTime_ = -1;
+    int64_t lastUpgradeTime_ = -1;
 };
 } // namespace UpdateService
 } // namespace OHOS
