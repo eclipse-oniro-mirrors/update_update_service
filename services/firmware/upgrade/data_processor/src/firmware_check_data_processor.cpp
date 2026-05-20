@@ -154,7 +154,8 @@ void FirmwareCheckDataProcessor::HandleNewVersion()
 void FirmwareCheckDataProcessor::BuildComponentSPath()
 {
     for (auto &component : componentList_) {
-        component.spath = Firmware::PACKAGE_PATH + "/" + component.fileName;
+        std::string filePath = Firmware::PACKAGE_PATH + "/" + component.fileName;
+        component.spath = FileUtils::GetFileRealPath(filePath);
     }
 }
 
