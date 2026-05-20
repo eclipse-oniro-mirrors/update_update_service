@@ -16,7 +16,6 @@
 #ifndef STATUS_CACHE_H
 #define STATUS_CACHE_H
 
-#include <atomic>
 #include <cstdint>
 
 #include "time_utils_proxy.h"
