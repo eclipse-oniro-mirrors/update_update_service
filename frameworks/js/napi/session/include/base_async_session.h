@@ -16,6 +16,7 @@
 #ifndef BASE_ASYNC_SESSION_H
 #define BASE_ASYNC_SESSION_H
 
+#include <mutex>
 #include "napi/native_api.h"
 #include "node_api.h"
 
@@ -39,6 +40,7 @@ public:
 
     void  ReleaseNapiReference(napi_env env)
     {
+        std::lock_guard<std::mutex> lock(callbackRefMutex_);
         for (size_t i = 0; i < callbackRef_.size(); i++) {
             if (callbackRef_[i] != nullptr) {
                 napi_status status = napi_delete_reference(env, callbackRef_[i]);
@@ -68,6 +70,7 @@ public:
             PARAM_CHECK_NAPI_CALL(env, ret == ClientStatus::CLIENT_SUCCESS,
                 NapiCommonUtils::NapiThrowParamError(env, paramInfos);
                 return nullptr, "invalid type");
+            std::lock_guard<std::mutex> lock(callbackRefMutex_);
             ret = NapiCommonUtils::CreateReference(env, args[i + startIndex], 1, callbackRef_[i]);
             PARAM_CHECK_NAPI_CALL(env, ret == ClientStatus::CLIENT_SUCCESS, return nullptr,
                 "Failed to create reference");
@@ -113,8 +116,10 @@ public:
         }
         PARAM_CHECK_NAPI_CALL(env, ret == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to build json");
-
-        napi_status retStatus = napi_get_reference_value(env, callbackRef_[0], &callback);
+        {
+            std::lock_guard<std::mutex> lock(callbackRefMutex_);
+            napi_status retStatus = napi_get_reference_value(env, callbackRef_[0], &callback);
+        }
         PARAM_CHECK_NAPI_CALL(env, retStatus == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to get reference");
         const int callBackNumber = 2;
@@ -133,6 +138,7 @@ public:
 protected:
     napi_async_work worker_ = nullptr;
     std::vector<napi_ref> callbackRef_ = { 0 };
+    std::mutex callbackRefMutex_;
 };
 } // namespace OHOS::UpdateService
 #endif // BASE_ASYNC_SESSION_H
