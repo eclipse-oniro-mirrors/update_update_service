@@ -39,7 +39,7 @@ public:
 
     void  ReleaseNapiReference(napi_env env)
     {
-        for (size_t i = 0; i < callbackNumber_; i++) {
+        for (size_t i = 0; i < callbackRef_.size(); i++) {
             if (callbackRef_[i] != nullptr) {
                 napi_status status = napi_delete_reference(env, callbackRef_[i]);
                 if (status != napi_ok) {
