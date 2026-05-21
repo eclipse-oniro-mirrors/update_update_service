@@ -104,6 +104,7 @@ public:
         napi_value callResult;
         napi_get_undefined(env, &undefined);
         napi_value retArgs[RESULT_ARGC] = { 0 };
+        napi_status retStatus;
 
         BusinessError businessError;
         GetBusinessError(businessError, result);
@@ -118,7 +119,7 @@ public:
             "Failed to build json");
         {
             std::lock_guard<std::mutex> lock(callbackRefMutex_);
-            napi_status retStatus = napi_get_reference_value(env, callbackRef_[0], &callback);
+            retStatus = napi_get_reference_value(env, callbackRef_[0], &callback);
         }
         PARAM_CHECK_NAPI_CALL(env, retStatus == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to get reference");
