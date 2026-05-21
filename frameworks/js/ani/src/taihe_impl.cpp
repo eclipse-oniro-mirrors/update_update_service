@@ -246,8 +246,15 @@ private:
 
 ohos::update::Updater GetOnlineUpdater(const ohos::update::UpgradeInfo &upgradeInfo)
 {
+#ifdef UPDATE_SERVICE_ONLINE_UPDATER
     const auto &info = AniCommonConverter::Converter(upgradeInfo);
     return taihe::make_holder<UpdaterImpl, ohos::update::Updater>(info);
+#endif
+    ErrorMessage errorMessage;
+    errorMessage.errorCode = INT_UN_SUPPORT;
+    errorMessage.errorMessage = "Capability not supported. Failed to call the API due to limited device capabilities.";
+    AniCommonConverter::Converter(errorMessage);
+    return nullptr;
 }
 
 ohos::update::Restorer GetRestorer()
