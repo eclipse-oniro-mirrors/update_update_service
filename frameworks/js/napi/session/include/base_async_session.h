@@ -16,6 +16,7 @@
 #ifndef BASE_ASYNC_SESSION_H
 #define BASE_ASYNC_SESSION_H
 
+#include <mutex>
 #include "napi/native_api.h"
 #include "node_api.h"
 
@@ -37,6 +38,20 @@ public:
         callbackRef_.clear();
     }
 
+    void  ReleaseNapiReference(napi_env env)
+    {
+        std::lock_guard<std::mutex> lock(callbackRefMutex_);
+        for (size_t i = 0; i < callbackRef_.size(); i++) {
+            if (callbackRef_[i] != nullptr) {
+                napi_status status = napi_delete_reference(env, callbackRef_[i]);
+                if (status != napi_ok) {
+                    ENGINE_LOGE("callbackRef %{public}zu release failed", i);
+                }
+                callbackRef_[i] = nullptr;
+            }
+        }
+    }
+
     napi_value StartWork(napi_env env, size_t startIndex, const napi_value *args) override
     {
         ENGINE_LOGI("BaseAsyncSession::StartWork startIndex: %{public}zu totalArgc_ %{public}zu "
@@ -55,6 +70,7 @@ public:
             PARAM_CHECK_NAPI_CALL(env, ret == ClientStatus::CLIENT_SUCCESS,
                 NapiCommonUtils::NapiThrowParamError(env, paramInfos);
                 return nullptr, "invalid type");
+            std::lock_guard<std::mutex> lock(callbackRefMutex_);
             ret = NapiCommonUtils::CreateReference(env, args[i + startIndex], 1, callbackRef_[i]);
             PARAM_CHECK_NAPI_CALL(env, ret == ClientStatus::CLIENT_SUCCESS, return nullptr,
                 "Failed to create reference");
@@ -65,11 +81,13 @@ public:
         status = napi_create_async_work(env, nullptr, workName, NapiSession::ExecuteWork, NapiSession::CompleteWork,
             this, &(worker_));
 
-        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, return nullptr, "Failed to create worker");
+        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, ReleaseNapiReference(env);return nullptr,
+            "Failed to create worker");
 
         // Put the thread in the task execution queue.
         status = napi_queue_async_work_with_qos(env, worker_, napi_qos_default);
-        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, return nullptr, "Failed to queue worker");
+        PARAM_CHECK_NAPI_CALL(env, status == napi_ok, ReleaseNapiReference(env);return nullptr,
+            "Failed to queue worker");
         napi_value result;
         napi_create_int32(env, 0, &result);
         return result;
@@ -86,6 +104,7 @@ public:
         napi_value callResult;
         napi_get_undefined(env, &undefined);
         napi_value retArgs[RESULT_ARGC] = { 0 };
+        napi_status retStatus;
 
         BusinessError businessError;
         GetBusinessError(businessError, result);
@@ -98,8 +117,10 @@ public:
         }
         PARAM_CHECK_NAPI_CALL(env, ret == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to build json");
-
-        napi_status retStatus = napi_get_reference_value(env, callbackRef_[0], &callback);
+        {
+            std::lock_guard<std::mutex> lock(callbackRefMutex_);
+            retStatus = napi_get_reference_value(env, callbackRef_[0], &callback);
+        }
         PARAM_CHECK_NAPI_CALL(env, retStatus == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to get reference");
         const int callBackNumber = 2;
@@ -107,10 +128,7 @@ public:
         PARAM_CHECK_NAPI_CALL(env, retStatus == napi_ok, napi_close_handle_scope(env, scope);return,
             "Failed to call function");
         // Release resources.
-        for (size_t i = 0; i < callbackNumber_; i++) {
-            napi_delete_reference(env, callbackRef_[i]);
-            callbackRef_[i] = nullptr;
-        }
+        ReleaseNapiReference(env);
         napi_delete_async_work(env, worker_);
         worker_ = nullptr;
         napi_close_handle_scope(env, scope);
@@ -121,6 +139,7 @@ public:
 protected:
     napi_async_work worker_ = nullptr;
     std::vector<napi_ref> callbackRef_ = { 0 };
+    std::mutex callbackRefMutex_;
 };
 } // namespace OHOS::UpdateService
 #endif // BASE_ASYNC_SESSION_H

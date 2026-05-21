@@ -16,8 +16,9 @@
 #ifndef FIRMWARE_STATUS_CACHE_H
 #define FIRMWARE_STATUS_CACHE_H
 
-#include "singleton.h"
+#include <mutex>
 
+#include "singleton.h"
 #include "status_cache.h"
 
 namespace OHOS {
@@ -32,6 +33,7 @@ public:
     bool IsUpgradeTriggered();
 private:
     std::shared_ptr<StatusCache> statusCache_ = nullptr;
+    std::recursive_mutex firmwareStatusMutex_;
 };
 } // namespace UpdateService
 } // namespace OHOS

@@ -35,6 +35,10 @@ void ModuleManager::LoadModule(std::string libPath)
     std::string prefix = "/system/lib64/updateext";
     std::string modulePrefix = "/module_update/3006/lib64/updateext";
     std::string suffix = ".so";
+    if (libPath.empty() || (libPath.length() < suffix.length())) {
+        UTILS_LOGE("LoadModule lib path is empty or too short");
+        return;
+    }
     if ((libPath.substr(0, prefix.length()) != prefix &&
         libPath.substr(0, modulePrefix.length()) != modulePrefix) ||
         (libPath.substr(libPath.length() - suffix.length(), suffix.length()) != suffix)) {
@@ -76,6 +80,11 @@ ModuleManager& ModuleManager::GetInstance()
 
 void ModuleManager::HookFunc(std::vector<uint32_t> codes, RequestFuncType handleRemoteRequest)
 {
+    if (handleRemoteRequest == nullptr) {
+        UTILS_LOGE("handleRemoteRequest is nullptr");
+        return;
+    }
+
     for (const uint32_t code : codes) {
         if (!IsMapFuncExist(code)) {
             UTILS_LOGI("add code %{public}d", code);
@@ -91,8 +100,13 @@ int32_t ModuleManager::HandleFunc(uint32_t code, MessageParcel &data, MessagePar
     if (!IsMapFuncExist(code)) {
         UTILS_LOGI("code %{public}d not exist", code);
     } else {
+        RequestFuncType func = onRemoteRequestFuncMap_[code];
+        if (func == nullptr) {
+            UTILS_LOGE("func for code %{public}d is nullptr", code);
+            return -1;
+        }
         UTILS_LOGI("code %{public}d called", code);
-        return static_cast<RequestFuncType>(onRemoteRequestFuncMap_[code])(code, data, reply, option);
+        return func(code, data, reply, option);
     }
     return 0;
 }
@@ -106,6 +120,11 @@ bool ModuleManager::IsModuleLoaded() const
 
 void ModuleManager::HookOnStartOnStopFunc(std::string phase, LifeCycleFuncType handleSAOnStartOnStop)
 {
+    if (handleSAOnStartOnStop == nullptr) {
+        UTILS_LOGE("handleSAOnStartOnStop is nullptr");
+        return;
+    }
+
     if (onStartOnStopFuncMap_.find(phase) == onStartOnStopFuncMap_.end()) {
         UTILS_LOGI("add phase %{public}s", phase.c_str());
         onStartOnStopFuncMap_.insert(std::make_pair(phase, handleSAOnStartOnStop));
@@ -121,12 +140,23 @@ void ModuleManager::HandleOnStartOnStopFunc(std::string phase, const OHOS::Syste
         UTILS_LOGI("phase %{public}s not exist", phase.c_str());
         return;
     }
+
+    LifeCycleFuncType func = onStartOnStopFuncMap_[phase];
+    if (func == nullptr) {
+        UTILS_LOGE("func for phase is nullptr");
+        return;
+    }
     UTILS_LOGI("HandleOnStartOnStopFunc phase %{public}s exist", phase.c_str());
-    static_cast<LifeCycleFuncType>(onStartOnStopFuncMap_[phase])(reason);
+    func(reason);
 }
 
 void ModuleManager::HookOnIdleFunc(std::string phase, LifeCycleFuncReturnType handleSAOnIdle)
 {
+    if (handleSAOnIdle == nullptr) {
+        UTILS_LOGE("handleSAOnIdle is nullptr");
+        return;
+    }
+
     if (onIdleFuncMap_.find(phase) == onIdleFuncMap_.end()) {
         UTILS_LOGI("add phase %{public}s", phase.c_str());
         onIdleFuncMap_.insert(std::make_pair(phase, handleSAOnIdle));
@@ -141,14 +171,24 @@ int32_t ModuleManager::HandleOnIdleFunc(std::string phase, const OHOS::SystemAbi
     if (onIdleFuncMap_.find(phase) == onIdleFuncMap_.end()) {
         UTILS_LOGI("phase %{public}s not exist", phase.c_str());
     } else {
+        LifeCycleFuncReturnType func = onIdleFuncMap_[phase];
+        if (func == nullptr) {
+            UTILS_LOGE("func for phase is nullptr");
+            return -1;
+        }
         UTILS_LOGI("phase %{public}s already exist", phase.c_str());
-        return static_cast<LifeCycleFuncReturnType>(onIdleFuncMap_[phase])(reason);
+        return func(reason);
     }
     return 0;
 }
 
 void ModuleManager::HookDumpFunc(std::string phase, LifeCycleFuncDumpType handleSADump)
 {
+    if (handleSADump == nullptr) {
+        UTILS_LOGE("handleSADump is nullptr");
+        return;
+    }
+
     if (onDumpFuncMap_.find(phase) == onDumpFuncMap_.end()) {
         UTILS_LOGI("add phase %{public}s", phase.c_str());
         onDumpFuncMap_.insert(std::make_pair(phase, handleSADump));
@@ -163,8 +203,13 @@ int ModuleManager::HandleDumpFunc(std::string phase, int fd, const std::vector<s
     if (onDumpFuncMap_.find(phase) == onDumpFuncMap_.end()) {
         UTILS_LOGI("phase %{public}s not exist", phase.c_str());
     } else {
+        LifeCycleFuncDumpType func = onDumpFuncMap_[phase];
+        if (func == nullptr) {
+            UTILS_LOGE("func is nullptr");
+            return -1;
+        }
         UTILS_LOGI("phase %{public}s already exist", phase.c_str());
-        return static_cast<LifeCycleFuncDumpType>(onDumpFuncMap_[phase])(fd, args);
+        return func(fd, args);
     }
     return 0;
 }

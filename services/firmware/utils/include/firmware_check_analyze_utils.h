@@ -39,6 +39,7 @@ private:
     int32_t ProcessCheckResults(cJSON *checkResults);
     int32_t ProcessDescriptInfo(cJSON *descriptInfo);
     int32_t AnalyzeBlVersionCheckResults(cJSON *root, BlCheckResponse &response);
+    bool IsValidFileName(const std::string &fileName);
 
 private:
     std::vector<FirmwareComponent> components_;

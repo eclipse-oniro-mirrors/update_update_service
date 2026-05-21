@@ -32,6 +32,7 @@
 
 namespace OHOS {
 namespace UpdateService {
+constexpr int32_t MAX_FILE_NAME_LENGTH = 255;
 void FirmwareCheckAnalyzeUtils::DoAnalyze(const std::string &rawJson, std::vector<FirmwareComponent> &components,
     Duration &duration, CheckAndAuthInfo &checkAndAuthInfo)
 {
@@ -80,6 +81,10 @@ int32_t FirmwareCheckAnalyzeUtils::AnalyzeBlVersionCheckResults(cJSON *root, BlC
         int32_t arraySize = cJSON_GetArraySize(itemCheckResults);
         for (int i = 0; i < arraySize; i++) {
             auto item = cJSON_GetArrayItem(itemCheckResults, i);
+            if (item == nullptr) {
+                FIRMWARE_LOGE("itemCheckResults %{public}d is nullptr", i);
+                continue;
+            }
             BlVersionCheckResult checkResult;
             ret += UpdateServiceJsonUtils::GetValueAndSetTo(item, "descriptPackageId", checkResult.descriptPackageId);
             checkResult.blVersionType = 1;
@@ -124,6 +129,16 @@ int32_t FirmwareCheckAnalyzeUtils::AnalyzeComponents(cJSON *root)
     // 处理 "checkResults" 部分
     ret += ProcessCheckResults(itemCheckResults);
 
+    // 检查文件总和，防止溢出
+    int64_t totalSize = 0;
+    for (const auto &component : components_) {
+        if (totalSize > INT64_MAX - component.size) {
+            FIRMWARE_LOGE("package total size overflow");
+            return CAST_INT(JsonParseError::MISSING_PROP);
+        }
+        totalSize += component.size;
+    }
+    
     // 检查 "descriptInfo" 是否存在
     cJSON *itemDescriptInfo = cJSON_GetObjectItemCaseSensitive(root, "descriptInfo");
     if (itemDescriptInfo == nullptr) {
@@ -137,6 +152,28 @@ int32_t FirmwareCheckAnalyzeUtils::AnalyzeComponents(cJSON *root)
     return ret;
 }
 
+bool FirmwareCheckAnalyzeUtils::IsValidFileName(const std::string &fileName)
+{
+    if (fileName.empty()) {
+        FIRMWARE_LOGE("FileName is empty");
+        return false;
+    }
+
+    if (fileName.length() > MAX_FILE_NAME_LENGTH) {
+        FIRMWARE_LOGE("FileName is too long");
+        return false;
+    }
+
+    static constexpr std::string_view invalidPattens[] = { "..", "/", "\\"};
+    for (const auto &pattern : invalidPattens) {
+        if (fileName.find(pattern) != std::string::npos) {
+            FIRMWARE_LOGE("Invalid file name");
+            return false;
+        }
+    }
+    return true;
+}
+
 int32_t FirmwareCheckAnalyzeUtils::ProcessCheckResults(cJSON *checkResults)
 {
     int32_t ret = CAST_INT(JsonParseError::ERR_OK);
@@ -145,7 +182,10 @@ int32_t FirmwareCheckAnalyzeUtils::ProcessCheckResults(cJSON *checkResults)
     int32_t arraySize = cJSON_GetArraySize(checkResults);
     for (int i = 0; i < arraySize; i++) {
         cJSON *itemResult = cJSON_GetArrayItem(checkResults, i);
-
+        if (itemResult == nullptr) {
+            FIRMWARE_LOGE("checkResults %{public}d is nullptr", i);
+            continue;
+        }
         FirmwareComponent component;
         int32_t componetSize = 0;
 
@@ -153,8 +193,16 @@ int32_t FirmwareCheckAnalyzeUtils::ProcessCheckResults(cJSON *checkResults)
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "descriptPackageId", component.descriptPackageId);
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "url", component.url);
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "size", componetSize);
+        if (componetSize <= 0) {
+            FIRMWARE_LOGE("componetSize is illegal");
+            continue;
+        }
         component.size = static_cast<int64_t>(componetSize);
         component.fileName = StringUtils::GetLastSplitString(component.url, "/");
+        if (!IsValidFileName(component.fileName)) {
+            FIRMWARE_LOGE("fileName illegal, %{public}d, %{public}s", i, component.fileName.c_str());
+            continue;
+        }
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "verifyInfo", component.verifyInfo);
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "versionCode", component.versionNumber);
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "versionName", component.targetBlVersionNumber);
@@ -185,6 +233,10 @@ int32_t FirmwareCheckAnalyzeUtils::ProcessDescriptInfo(cJSON *descriptInfo)
     int32_t arraySize = cJSON_GetArraySize(descriptInfo);
     for (int i = 0; i < arraySize; i++) {
         cJSON *itemInfo = cJSON_GetArrayItem(descriptInfo, i);
+        if (itemInfo == nullptr) {
+            FIRMWARE_LOGE("descriptInfo %{public}d is nullptr", i);
+            continue;
+        }
         int32_t descriptInfoType;
         std::string descContent;
         std::string subString = "quota";

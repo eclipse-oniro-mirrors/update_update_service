@@ -77,7 +77,11 @@ void CombinePackageVersionUtils::HandleBaseVersionLog(std::string &baseVersion, 
         return;
     }
     base = baseVersion.substr(start, mid - start);
-    log = baseVersion.substr(mid, end - mid);
+    if (mid >= end) {
+        log = "";
+    } else {
+        log = baseVersion.substr(mid, end - mid);
+    }
 }
 
 std::string CombinePackageVersionUtils::HandleCustVersion(std::string &custVersion)
