@@ -35,6 +35,9 @@ public:
 
     int32_t FactoryReset(BusinessError &businessError) override;
     int32_t ForceFactoryReset(BusinessError &businessError) override;
+    int32_t DeepFactoryReset(const FactoryResetStrategy factoryResetStrategy, BusinessError &businessError) override;
+    int32_t GetDeepFactoryResetInfo(const FactoryResetStrategy factoryResetStrategy,
+        FactoryResetInfo &factoryResetInfo, BusinessError &businessError) override;
 private:
     int32_t FileManagerEraseKeys();
     static sptr<StorageManager::IStorageManager> GetStorageMgrProxy();

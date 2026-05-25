@@ -19,6 +19,8 @@
 #include "refbase.h"
 
 #include "business_error.h"
+#include "factory_reset_info.h"
+#include "factory_reset_strategy.h"
 
 namespace OHOS::UpdateService {
 class IServiceRestorer : public virtual RefBase {
@@ -27,6 +29,10 @@ public:
 
     virtual int32_t FactoryReset(BusinessError &businessError) = 0;
     virtual int32_t ForceFactoryReset(BusinessError &businessError) = 0;
+    virtual int32_t DeepFactoryReset(const FactoryResetStrategy factoryResetStrategy,
+        BusinessError &businessError) = 0;
+    virtual int32_t GetDeepFactoryResetInfo(const FactoryResetStrategy factoryResetStrategy,
+        FactoryResetInfo &factoryResetInfo, BusinessError &businessError) = 0;
 };
 } // namespace OHOS::UpdateService
 #endif // ISERVICE_RESTORER_H

@@ -26,6 +26,7 @@
 #include "download_options.h"
 #include "event_classify_info.h"
 #include "event_info.h"
+#include "factory_reset_strategy.h"
 #include "napi_common_utils.h"
 #include "network_type.h"
 #include "order.h"
@@ -48,6 +49,7 @@ public:
     static int32_t BuildUpgradePolicy(napi_env env, napi_value &obj, const UpdateResult &result);
     static int32_t BuildTaskInfo(napi_env env, napi_value &obj, const UpdateResult &result);
     static int32_t BuildUndefinedStatus(napi_env env, napi_value &obj, const UpdateResult &result);
+    static int32_t BuildFactoryResetInfo(napi_env env, napi_value &obj, const UpdateResult &result);
 
     static ClientStatus GetUpgradeInfoFromArg(napi_env env, const napi_value arg, UpgradeInfo &upgradeInfo);
     static ClientStatus GetUpgradePolicyFromArg(napi_env env, const napi_value arg, UpgradePolicy &upgradePolicy);
@@ -66,6 +68,8 @@ public:
         ResumeDownloadOptions &resumeDownloadOptions);
     static ClientStatus GetEventClassifyInfoFromArg(napi_env env, const napi_value arg,
         EventClassifyInfo &eventClassifyInfo);
+    static ClientStatus GetFactoryResetStrategyFromArg(napi_env env, const napi_value arg,
+        FactoryResetStrategy &factoryResetStrategy);
 
     static bool IsValidUpgradeFile(const std::string &upgradeFile);
 

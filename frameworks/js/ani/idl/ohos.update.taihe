@@ -144,6 +144,20 @@
     filePath: String;
   }
 
+  struct FactoryResetStrategy {
+    scope: FactoryResetScope;
+    strategy: String;
+  }
+
+  struct FactoryResetInfo {
+    duration: i32;
+  }
+
+  enum FactoryResetScope : i32 {
+    DATA = 1,
+    DATA_AND_OS = 2
+  }
+
   enum BusinessVendor : String {
     PUBLIC = "public"
   }
@@ -322,6 +336,12 @@ interface Updater {
     @gen_async("forceFactoryReset")
     @gen_promise("forceFactoryReset")
     ForceFactoryResetSync(): void;
+    @gen_async("deepFactoryReset")
+    @gen_promise("deepFactoryReset")
+    DeepFactoryResetSync(factoryResetStrategy: FactoryResetStrategy): void;
+    @gen_async("getDeepFactoryResetInfo")
+    @gen_promise("getDeepFactoryResetInfo")
+    GetDeepFactoryResetInfoSync(factoryResetStrategy: FactoryResetStrategy): FactoryResetInfo;
   }
 
   interface LocalUpdater {

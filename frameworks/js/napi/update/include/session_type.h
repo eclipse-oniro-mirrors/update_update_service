@@ -42,6 +42,8 @@ constexpr uint32_t SESSION_GET_CUR_VERSION_DESCRIPTION = 19;
 constexpr uint32_t SESSION_GET_TASK_INFO = 20;
 constexpr uint32_t SESSION_REPLY_PARAM_ERROR = 21;
 constexpr uint32_t SESSION_FORCE_FACTORY_RESET = 22;
+constexpr uint32_t SESSION_DEEP_FACTORY_RESET = 23;
+constexpr uint32_t SESSION_GET_DEEP_FACTORY_RESET_INFO = 24;
 constexpr uint32_t SESSION_MAX = UINT32_MAX;
 } // namespace OHOS::UpdateService::SessionType
 #endif // UPDATE_SESSION_TYPE_H

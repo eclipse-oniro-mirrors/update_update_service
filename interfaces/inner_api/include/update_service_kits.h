@@ -24,6 +24,8 @@
 #include "current_version_info.h"
 #include "description_options.h"
 #include "download_options.h"
+#include "factory_reset_info.h"
+#include "factory_reset_strategy.h"
 #include "iupdate_callback.h"
 #include "pause_download_options.h"
 #include "resume_download_options.h"
@@ -103,6 +105,12 @@ public:
     virtual int32_t FactoryReset(BusinessError &businessError) = 0;
 
     virtual int32_t ForceFactoryReset(BusinessError &businessError) = 0;
+
+    virtual int32_t DeepFactoryReset(const FactoryResetStrategy &factoryResetStrategy,
+        BusinessError &businessError) = 0;
+
+    virtual int32_t GetDeepFactoryResetInfo(const FactoryResetStrategy &factoryResetStrategy,
+        FactoryResetInfo &factoryResetInfo, BusinessError &businessError) = 0;
 
     virtual int32_t ApplyNewVersion(const UpgradeInfo &info, const std::string &miscFile,
         const std::vector<std::string> &packageNames, BusinessError &businessError, int32_t &funcResult) = 0;

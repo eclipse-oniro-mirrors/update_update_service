@@ -280,7 +280,10 @@ static bool DefineRestorer(napi_env env, napi_value exports)
 {
     napi_property_descriptor desc[] = {
         DECLARE_NAPI_FUNCTION(Restorer::Napi::FUNCTION_FACTORY_RESET, Restorer::Napi::FactoryReset),
-        DECLARE_NAPI_FUNCTION(Restorer::Napi::FUNCTION_FORCE_FACTORY_RESET, Restorer::Napi::ForceFactoryReset)
+        DECLARE_NAPI_FUNCTION(Restorer::Napi::FUNCTION_FORCE_FACTORY_RESET, Restorer::Napi::ForceFactoryReset),
+        DECLARE_NAPI_FUNCTION(Restorer::Napi::FUNCTION_DEEP_FACTORY_RESET, Restorer::Napi::DeepFactoryReset),
+        DECLARE_NAPI_FUNCTION(Restorer::Napi::FUNCTION_GET_DEEP_FACTORY_RESET_INFO,
+            Restorer::Napi::GetDeepFactoryResetInfo)
     };
 
     NativeClass nativeClass = {

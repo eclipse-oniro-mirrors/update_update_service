@@ -358,6 +358,28 @@ int32_t UpdateService::ForceFactoryReset(BusinessError &businessError, int32_t &
     return restorer->ForceFactoryReset(businessError);
 }
 
+int32_t UpdateService::DeepFactoryReset(const FactoryResetStrategy &factoryResetStrategy, BusinessError &businessError,
+    int32_t &funcResult)
+{
+    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
+    if (restorer == nullptr) {
+        ENGINE_LOGE("DeepFactoryReset restorer null");
+        return INT_CALL_FAIL;
+    }
+    return restorer->DeepFactoryReset(factoryResetStrategy, businessError);
+}
+
+int32_t UpdateService::GetDeepFactoryResetInfo(const FactoryResetStrategy &factoryResetStrategy,
+    FactoryResetInfo &factoryResetInfo, BusinessError &businessError, int32_t &funcResult)
+{
+    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
+    if (restorer == nullptr) {
+        ENGINE_LOGE("DeepFactoryReset restorer null");
+        return INT_CALL_FAIL;
+    }
+    return restorer->GetDeepFactoryResetInfo(factoryResetStrategy, factoryResetInfo, businessError);
+}
+
 int32_t UpdateService::ApplyNewVersion(const UpgradeInfo &info, const std::string &miscFile,
     const std::vector<std::string> &packageNames, BusinessError &businessError, int32_t &funcResult)
 {
@@ -616,7 +638,9 @@ bool UpdateService::IsPermissionGranted(uint32_t code)
 {
     Security::AccessToken::AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
     string permission = "ohos.permission.UPDATE_SYSTEM";
-    if (code == CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET)) {
+    if (code == CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET) ||
+        code == CAST_UINT(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET) ||
+        code == CAST_UINT(UpdaterSaInterfaceCode::GET_DEEP_FACTORY_RESET_INFO)) {
         permission = "ohos.permission.FACTORY_RESET";
     }
     if (code == CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET)) {

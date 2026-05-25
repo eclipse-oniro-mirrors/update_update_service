@@ -22,6 +22,7 @@
 #include "description_format.h"
 #include "description_type.h"
 #include "effective_mode.h"
+#include "factory_reset_scope.h"
 #include "ota_mode.h"
 #include "event_classify.h"
 #include "event_id.h"
@@ -60,6 +61,7 @@ void DefineProperty::DefineProperties(napi_env env, napi_value exports)
     DefineEventId(env, exports);
     DefineUpgradeAction(env, exports);
     DefineBusinessVendor(env, exports);
+    DefineFactoryResetScope(env, exports);
 }
 
 void DefineProperty::DefineCallResult(napi_env env, napi_value exports)
@@ -252,5 +254,14 @@ void DefineProperty::DefineBusinessVendor(napi_env env, napi_value exports)
         DECLARE_STRING_PROPERTY(BusinessVendor::PUBLIC)
     };
     NapiCommonUtils::CreateProperty(env, exports, "BusinessVendor", businessVendorList);
+}
+
+void DefineProperty::DefineFactoryResetScope(napi_env env, napi_value exports)
+{
+    std::vector<std::pair<std::string, napi_value>> factoryResetScopeList = {
+        DECLARE_ENUM_PROPERTY(FactoryResetScope::DATA),
+        DECLARE_ENUM_PROPERTY(FactoryResetScope::DATA_AND_OS)
+    };
+    NapiCommonUtils::CreateProperty(env, exports, "FactoryResetScope", factoryResetScopeList);
 }
 } // namespace OHOS::UpdateService

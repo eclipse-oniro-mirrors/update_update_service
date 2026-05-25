@@ -302,4 +302,19 @@ ohos::update::EventInfo AniCommonConverter::Converter(const EventInfo &info)
         .taskBody = Converter(info.taskBody)
     };
 }
+
+FactoryResetStrategy AniCommonConverter::Converter(const ohos::update::FactoryResetStrategy &factoryResetStrategy)
+{
+    FactoryResetStrategy resetStrategy;
+    resetStrategy.scope = static_cast<FactoryResetScope>(factoryResetStrategy.scope.get_value());
+    resetStrategy.strategy = factoryResetStrategy.strategy;
+    return resetStrategy;
+}
+
+ohos::update::FactoryResetInfo AniCommonConverter::Converter(const FactoryResetInfo &factoryResetInfo)
+{
+    return {
+        .duration = factoryResetInfo.duration
+    };
+}
 }

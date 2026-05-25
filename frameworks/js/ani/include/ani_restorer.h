@@ -17,6 +17,8 @@
 #define ANI_RESTORER_H
 
 #include "ani_base_updater.h"
+#include "factory_reset_info.h"
+#include "factory_reset_strategy.h"
 
 namespace OHOS::UpdateService {
 class AniRestorer final : public AniBaseUpdater {
@@ -26,6 +28,9 @@ public:
 
     void FactoryResetSync();
     void ForceFactoryResetSync();
+    void DeepFactoryResetSync(const ohos::update::FactoryResetStrategy &factoryResetStrategy);
+    ohos::update::FactoryResetInfo GetDeepFactoryResetInfoSync(
+        const ohos::update::FactoryResetStrategy &factoryResetStrategy);
 
 protected:
     std::string GetPermissionName() override;

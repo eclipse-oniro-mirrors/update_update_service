@@ -43,6 +43,8 @@ model_src = [
   "../feature/update/model/upgrade_info/src/business_error.cpp",
   "../feature/update/model/upgrade_info/src/clear_options.cpp",
   "../feature/update/model/upgrade_info/src/download_options.cpp",
+  "../feature/update/model/upgrade_info/src/factory_reset_info.cpp",
+  "../feature/update/model/upgrade_info/src/factory_reset_strategy.cpp",
   "../feature/update/model/upgrade_info/src/pause_download_options.cpp",
   "../feature/update/model/upgrade_info/src/resume_download_options.cpp",
   "../feature/update/model/upgrade_info/src/upgrade_info.cpp",

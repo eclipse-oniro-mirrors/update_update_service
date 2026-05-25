@@ -42,6 +42,7 @@ private:
     static void DefineEventId(napi_env env, napi_value exports);
     static void DefineUpgradeAction(napi_env env, napi_value exports);
     static void DefineBusinessVendor(napi_env env, napi_value exports);
+    static void DefineFactoryResetScope(napi_env env, napi_value exports);
 };
 } // namespace OHOS::UpdateService
 #endif // UPDATE_DEFINE_PROPERTY_H

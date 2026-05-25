@@ -174,6 +174,26 @@ public:
         }
         aniRestorer_->ForceFactoryResetSync();
     }
+
+    void DeepFactoryResetSync(const ohos::update::FactoryResetStrategy &factoryResetStrategy)
+    {
+        ENGINE_LOGI("%{public}s method invoked", __func__);
+        if (aniRestorer_ == nullptr) {
+            aniRestorer_ = std::make_shared<AniRestorer>();
+        }
+        aniRestorer_->DeepFactoryResetSync(factoryResetStrategy);
+    }
+
+    ohos::update::FactoryResetInfo GetDeepFactoryResetInfoSync(
+        const ohos::update::FactoryResetStrategy &factoryResetStrategy)
+    {
+        ENGINE_LOGI("%{public}s method invoked", __func__);
+        if (aniRestorer_ == nullptr) {
+            aniRestorer_ = std::make_shared<AniRestorer>();
+        }
+        return aniRestorer_->GetDeepFactoryResetInfoSync(factoryResetStrategy);
+    }
+
 private:
     static inline std::shared_ptr<AniRestorer> aniRestorer_ = nullptr;
 };

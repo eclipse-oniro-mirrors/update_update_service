@@ -15,6 +15,7 @@
 
 #include "ani_restorer.h"
 
+#include "ani_common_conveter.h"
 #include "update_service_kits.h"
 
 namespace OHOS::UpdateService {
@@ -30,6 +31,25 @@ void AniRestorer::ForceFactoryResetSync()
     BusinessError error;
     const int32_t ret = UpdateServiceKits::GetInstance().ForceFactoryReset(error);
     SetError(ret, "forceFactoryReset", error);
+}
+
+void AniRestorer::DeepFactoryResetSync(const ohos::update::FactoryResetStrategy &factoryResetStrategy)
+{
+    BusinessError error;
+    const int32_t ret = UpdateServiceKits::GetInstance().DeepFactoryReset(
+        AniCommonConverter::Converter(factoryResetStrategy), error);
+    SetError(ret, "deepFactoryResetSync", error);
+}
+
+ohos::update::FactoryResetInfo AniRestorer::GetDeepFactoryResetInfoSync(
+    const ohos::update::FactoryResetStrategy &factoryResetStrategy)
+{
+    BusinessError error;
+    FactoryResetInfo factoryResetInfo;
+    const int32_t ret = UpdateServiceKits::GetInstance().GetDeepFactoryResetInfo(
+        AniCommonConverter::Converter(factoryResetStrategy), factoryResetInfo, error);
+    SetError(ret, "getDeepFactoryResetInfoSync", error);
+    return AniCommonConverter::Converter(factoryResetInfo);
 }
 
 std::string AniRestorer::GetPermissionName()
