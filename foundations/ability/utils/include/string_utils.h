@@ -140,13 +140,6 @@ public:
         return;
     }
 
-    static bool StringToBool(const std::string &str)
-    {
-        std::string lowerStr = str;
-        std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
-        return (lowerStr == "true" || lowerStr == "1");
-    }
-
     template <typename T>[[maybe_unused]] static StrCnvResult DecStringToNumber(const std::string &str, T &number)
     {
         constexpr int numberBase = 10;
