@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <thread>
+#include <unordered_set>
 
 #include "if_system_ability_manager.h"
 #include "ipc_skeleton.h"
@@ -135,6 +136,7 @@ private:
     bool IsCallerValid();
     bool IsPermissionGranted(uint32_t code);
     int32_t PermissionCheck(uint32_t code);
+    bool IsMdmDisableReset(uint32_t code);
 
 #ifndef UPDATER_UT
 private:
@@ -167,6 +169,9 @@ private:
     std::map<UpgradeInfo, ClientProxy> clientProxyMap_;
     static sptr<UpdateService> updateService_;
     std::shared_ptr<UpdateServiceImplManager> updateImplMgr_ = nullptr;
+    static const std::unordered_set<uint32_t> RESET_CODES;
+    static constexpr std::string_view MDM_DISABLE_RESET_PARA = "persist.edm.factory_reset_disabled";
+    static constexpr std::string_view DEFAULT_MDM_DISABLE_RESET_PARA = "false";
 };
 
 } // namespace UpdateService

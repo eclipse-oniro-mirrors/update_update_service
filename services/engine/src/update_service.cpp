@@ -31,8 +31,11 @@
 #include "firmware_manager.h"
 #include "ipc_skeleton.h"
 #include "module_manager.h"
+#include "parameter.h"
+#include "parameters.h"
 #include "securec.h"
 #include "startup_manager.h"
+#include "string_utils.h"
 #include "tokenid_kit.h"
 #include "update_log.h"
 #include "update_service_cache.h"
@@ -53,6 +56,11 @@ namespace OHOS {
 namespace UpdateService {
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
+const std::unordered_set<uint32_t> RESET_CODES = {
+    CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET),
+    CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
+    CAST_UINT(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET)
+};
 REGISTER_SYSTEM_ABILITY_BY_ID(UpdateService, UPDATE_DISTRIBUTED_SERVICE_ID, true)
 
 OHOS::sptr<UpdateService> UpdateService::updateService_ { nullptr };
@@ -579,6 +587,11 @@ int32_t UpdateService::PermissionCheck(uint32_t code)
         return INT_APP_NOT_GRANTED;
     }
 
+    if (IsMdmDisableReset(code)) {
+        ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
+        return INT_MDM_DISABLE_RESET;
+    }
+
     if (code == CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET)) {
         SYS_EVENT_SYSTEM_RESET(0, UpdateSystemEvent::RESET_START);
     }
@@ -652,6 +665,15 @@ bool UpdateService::IsPermissionGranted(uint32_t code)
         ENGINE_LOGE("%{public}s not granted, code:%{public}u", permission.c_str(), code);
     }
     return isPermissionGranted;
+}
+
+bool UpdaterService::IsMdmDisableReset(uint32_t code)
+{
+    if (OHOS::UpdaterService::RESET_CODES.find(code) != OHOS::UpdaterService::RESET_CODES.end()){
+        std::string disableReset = OHOS::system::GetParameter(MDM_DISABLE_RESET_PARA.data(), DEFAULT_MDM_DISABLE_RESET_PARA.data());
+        return StringUtils::StringToBool(disableReset);
+    }
+    return false;
 }
 } // namespace UpdateService
 } // namespace OHOS

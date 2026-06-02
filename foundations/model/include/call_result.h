@@ -25,6 +25,7 @@ enum class CallResult {
     // 通用错误码
     APP_NOT_GRANTED = 201,
     NOT_SYSTEM_APP = 202,
+    MDM_DISABLE_RESET = 203,
     PARAM_ERR = 401,
     UN_SUPPORT = 801,
 
@@ -54,6 +55,7 @@ constexpr int32_t INT_TIME_OUT = CAST_INT(CallResult::TIME_OUT);
 constexpr int32_t INT_DB_ERROR = CAST_INT(CallResult::DB_ERROR);
 constexpr int32_t INT_IO_ERROR = CAST_INT(CallResult::IO_ERROR);
 constexpr int32_t INT_NET_ERROR = CAST_INT(CallResult::NET_ERROR);
+constexpr int32_t INT_MDM_DISABLE_RESET = CAST_INT(CallResult::MDM_DISABLE_RESET);
 constexpr std::string_view NOT_SYSTEM_APP_INFO =
     ": Permission verification failed. A non-system application calls a system API.";
 } // namespace OHOS::UpdateService
