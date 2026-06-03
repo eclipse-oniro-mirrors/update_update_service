@@ -669,7 +669,7 @@ bool UpdateService::IsPermissionGranted(uint32_t code)
 
 bool UpdaterService::IsMdmDisableReset(uint32_t code)
 {
-    if (OHOS::UpdaterService::RESET_CODES.find(code) != OHOS::UpdaterService::RESET_CODES.end()) {
+    if (OHOS::UpdateService::RESET_CODES.find(code) != OHOS::UpdateService::RESET_CODES.end()) {
         return OHOS::system::GetBoolParameter(MDM_DISABLE_RESET_PARA.data(), DEFAULT_MDM_DISABLE_RESET_PARA.data());
     }
     return false;
