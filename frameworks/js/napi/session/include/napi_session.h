@@ -107,6 +107,9 @@ protected:
                 msg = "BusinessError " + std::to_string(workResult_) + ": Permission denied. An attempt was made to " +
                       funcName + " forbidden by permission: " + permissionName + ".";
                 break;
+            case INT_MDM_DISABLE_RESET:
+                msg = "BusinessError " + std::to_string(workResult_) + ": This function is prohibited by enterprise management policies.";
+                break;
             case INT_CALL_IPC_ERR:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IPC error.";
                 break;

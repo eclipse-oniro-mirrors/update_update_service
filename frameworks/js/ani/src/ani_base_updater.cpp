@@ -91,7 +91,8 @@ void AniBaseUpdater::CallbackEventInfo(const EventInfo &eventInfo)
 bool AniBaseUpdater::IsCommonError(CallResult callResult)
 {
     return callResult == CallResult::UN_SUPPORT || callResult == CallResult::NOT_SYSTEM_APP ||
-        callResult == CallResult::APP_NOT_GRANTED || callResult == CallResult::PARAM_ERR;
+        callResult == CallResult::APP_NOT_GRANTED || callResult == CallResult::PARAM_ERR ||
+        callResult == CallResult::MDM_DISABLE_RESET;
 }
 
 int32_t AniBaseUpdater::ConvertToErrorCode(CallResult callResult)
@@ -118,6 +119,9 @@ BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, i
             msg = "BusinessError " + callResultStr + ": Permission denied. An attempt was made to " + funcName +
                 " forbidden by permission: " + GetPermissionName() + ".";
             break;
+        case INT_MDM_DISABLE_RESET:
+                msg = "BusinessError " + std::to_string(workResult_) + ": This function is prohibited by enterprise management policies.";
+                break;
         case INT_CALL_IPC_ERR:
             msg = "BusinessError " + callResultStr + ": IPC error.";
             break;
