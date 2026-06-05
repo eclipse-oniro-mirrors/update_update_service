@@ -162,7 +162,7 @@ protected:
 
     void BuildWorkBusinessErr(BusinessError &businessError)
     {
-        std::string message = GetComponentErrorMessage() + GetCommonErrorMessage();     
+        std::string message = GetComponentErrorMessage() + GetCommonErrorMessage();
         businessError.Build(static_cast<CallResult>(workResult_), message);
     }
 
