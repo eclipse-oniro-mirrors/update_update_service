@@ -155,8 +155,8 @@ std::string  AniBaseUpdater::GetCommonErrorMessage(const std::string &funcName, 
                 " forbidden by permission: " + GetPermissionName() + ".";
             break;
         case INT_MDM_DISABLE_RESET:
-                msg = "BusinessError " + std::to_string(workResult_) +
-                    ": This function is prohibited by enterprise management policies.";
+            msg = "BusinessError " + callResultStr +
+                ": This function is prohibited by enterprise management policies.";
                 break;
         case INT_CALL_IPC_ERR:
             msg = "BusinessError " + callResultStr + ": IPC error.";
