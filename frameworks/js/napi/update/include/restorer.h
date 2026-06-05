@@ -17,6 +17,8 @@
 #define UPDATE_CLIENT_RESTORER_H
 
 #include "js_native_api_types.h"
+#include "factory_reset_info.h"
+#include "factory_reset_strategy.h"
 
 #include "iupdater.h"
 
@@ -33,11 +35,26 @@ public:
         static constexpr const char *FUNCTION_FORCE_FACTORY_RESET = "forceFactoryReset";
 
         static napi_value ForceFactoryReset(napi_env env, napi_callback_info info);
+
+        static constexpr const char *FUNCTION_DEEP_FACTORY_RESET = "deepFactoryReset";
+
+        static napi_value DeepFactoryReset(napi_env env, napi_callback_info info);
+
+        static constexpr const char *FUNCTION_GET_DEEP_FACTORY_RESET_INFO = "getDeepFactoryResetInfo";
+
+        static napi_value GetDeepFactoryResetInfo(napi_env env, napi_callback_info info);
     };
 
     Restorer(napi_env env, napi_value thisVar);
     napi_value FactoryReset(napi_env env, napi_callback_info info);
     napi_value ForceFactoryReset(napi_env env, napi_callback_info info);
+    napi_value DeepFactoryReset(napi_env env, napi_callback_info info);
+    napi_value GetDeepFactoryResetInfo(napi_env env, napi_callback_info info);
+    void GetUpdateResult(uint32_t type, UpdateResult &result);
+private:
+    int32_t ParseParamResetStrategy(napi_env env, napi_callback_info info);
+    FactoryResetStrategy factoryResetStrategy_ {};
+    FactoryResetInfo factoryResetInfo_ {};
 };
 } // namespace OHOS::UpdateService
 #endif // UPDATE_CLIENT_RESTORER_H

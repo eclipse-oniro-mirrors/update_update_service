@@ -253,9 +253,34 @@ int32_t UpdateServiceKitsImpl::ForceFactoryReset(BusinessError &businessError)
     ENGINE_LOGI("UpdateServiceKitsImpl::ForceFactoryReset");
     auto updateService = GetService();
     RETURN_FAIL_WHEN_SERVICE_NULL(updateService);
-    int32_t funcResult;
+    int32_t funcResult = 0;
     int32_t ret = updateService->ForceFactoryReset(businessError, funcResult);
     ENGINE_CHECK((ret) == INT_CALL_SUCCESS, ResetRemoteService(), "ForceFactoryReset ipc error");
+    return ret;
+}
+
+int32_t UpdateServiceKitsImpl::DeepFactoryReset(const FactoryResetStrategy &factoryResetStrategy,
+    BusinessError &businessError)
+{
+    ENGINE_LOGI("UpdateServiceKitsImpl::DeepFactoryReset");
+    auto updateService = GetService();
+    RETURN_FAIL_WHEN_SERVICE_NULL(updateService);
+    int32_t funcResult = 0;
+    int32_t ret = updateService->DeepFactoryReset(factoryResetStrategy, businessError, funcResult);
+    ENGINE_CHECK((ret) == INT_CALL_SUCCESS, ResetRemoteService(), "DeepFactoryReset ipc error");
+    return ret;
+}
+
+int32_t UpdateServiceKitsImpl::GetDeepFactoryResetInfo(const FactoryResetStrategy &factoryResetStrategy,
+    FactoryResetInfo &factoryResetInfo, BusinessError &businessError)
+{
+    ENGINE_LOGI("UpdateServiceKitsImpl::GetDeepFactoryResetInfo");
+    auto updateService = GetService();
+    RETURN_FAIL_WHEN_SERVICE_NULL(updateService);
+    int32_t funcResult = 0;
+    int32_t ret = updateService->GetDeepFactoryResetInfo(factoryResetStrategy, factoryResetInfo, businessError,
+        funcResult);
+    ENGINE_CHECK((ret) == INT_CALL_SUCCESS, ResetRemoteService(), "GetDeepFactoryResetInfo ipc error");
     return ret;
 }
 
@@ -295,6 +320,7 @@ void UpdateServiceKitsImpl::ResetService(const wptr<IRemoteObject> &remote)
 {
     BaseServiceKitsImpl::ResetService(remote);
     constexpr int32_t retryMaxTimes = 3;
+    std::lock_guard<std::recursive_mutex> lock(remoteServerLock_);
     ENGINE_LOGI("ResetService, remoteUpdateCallbackMap_: %{public}zu, retryTimes_: %{public}d",
         remoteUpdateCallbackMap_.size(), retryTimes_);
     if (!remoteUpdateCallbackMap_.empty() && retryTimes_ < retryMaxTimes) {

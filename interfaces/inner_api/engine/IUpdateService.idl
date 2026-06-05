@@ -32,6 +32,8 @@ sequenceable OHOS.UpdateService.UpgradeOptions;
 sequenceable OHOS.UpdateService.UpgradePolicy;
 sequenceable OHOS.UpdateService.VersionDescriptionInfo;
 sequenceable OHOS.UpdateService.VersionDigestInfo;
+sequenceable OHOS.UpdateService.FactoryResetStrategy;
+sequenceable OHOS.UpdateService.FactoryResetInfo;
 
 option_stub_hooks on;
 option_parcel_hooks on;
@@ -69,4 +71,7 @@ interface OHOS.UpdateService.IUpdateService {
         [in] String[] packageNames, [out] BusinessError businessError);
     [ipccode 20] int VerifyUpgradePackage([in] String packagePath, [in] String keyPath, [out] BusinessError businessError);
     [ipccode 21] int ForceFactoryReset([out] BusinessError businessError);
+    [ipccode 22] int DeepFactoryReset([in] FactoryResetStrategy factoryResetStrategy, [out] BusinessError businessError);
+    [ipccode 23] int GetDeepFactoryResetInfo([in] FactoryResetStrategy factoryResetStrategy,
+        [out] FactoryResetInfo factoryResetInfo, [out] BusinessError businessError);
 }

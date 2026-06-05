@@ -687,4 +687,39 @@ ClientStatus ClientHelper::BuildEventInfo(napi_env env, napi_value &obj, const E
         "BuildEventInfo error, build task info fail");
     return ClientStatus::CLIENT_SUCCESS;
 }
+
+ClientStatus ClientHelper::GetFactoryResetStrategyFromArg(napi_env env, const napi_value arg,
+    FactoryResetStrategy &factoryResetStrategy)
+{
+    PARAM_CHECK(CheckNapiObjectType(env, arg) == ClientStatus::CLIENT_SUCCESS,
+        return ClientStatus::CLIENT_INVALID_TYPE, "GetFactoryResetStrategyFromArg type invalid");
+    int32_t scope = 0;
+    NapiCommonUtils::GetInt32(env, arg, "scope", scope);
+    static const std::list<FactoryResetScope> scopeTypeList = {FactoryResetScope::DATA,
+        FactoryResetScope::DATA_AND_OS};
+    PARAM_CHECK(IsValidEnum(scopeTypeList, scope), return ClientStatus::CLIENT_INVALID_TYPE,
+        "GetFactoryResetStrategyFromArg error, invalid scope:%{public}d", scope);
+    factoryResetStrategy.scope = static_cast<FactoryResetScope>(scope);
+    NapiCommonUtils::GetString(env, arg, "strategy", factoryResetStrategy.strategy);
+    return ClientStatus::CLIENT_SUCCESS;
+}
+
+int32_t ClientHelper::BuildFactoryResetInfo(napi_env env, napi_value &obj, const UpdateResult &result)
+{
+    ENGINE_LOGI("BuildFactoryResetInfo");
+    PARAM_CHECK(result.result.factoryResetInfo != nullptr, return CAST_INT(ClientStatus::CLIENT_FAIL),
+        "ClientHelper::BuildFactoryResetInfo null");
+    PARAM_CHECK(result.type == SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO,
+        return CAST_INT(ClientStatus::CLIENT_INVALID_TYPE), "invalid type %{public}d", result.type);
+
+    napi_status status = napi_create_object(env, &obj);
+    PARAM_CHECK(status == napi_ok, return CAST_INT(ClientStatus::CLIENT_INVALID_TYPE),
+        "Failed to create napi_create_object %d", static_cast<int32_t>(status));
+
+    FactoryResetInfo *info = result.result.factoryResetInfo;
+    PARAM_CHECK(info != nullptr, return CAST_INT(ClientStatus::CLIENT_FAIL), "info is null");
+
+    NapiCommonUtils::SetInt32(env, obj, "duration", info->duration);
+    return CAST_INT(ClientStatus::CLIENT_SUCCESS);
+}
 } // namespace OHOS::UpdateService

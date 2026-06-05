@@ -170,6 +170,8 @@ std::map<uint32_t, std::string> SessionFuncHelper::sessionFuncMap_ = {
     {SessionType::SESSION_APPLY_NEW_VERSION,           "applyNewVersion"},
     {SessionType::SESSION_FACTORY_RESET,               "factoryReset"},
     {SessionType::SESSION_FORCE_FACTORY_RESET,         "forceFactoryReset"},
+    {SessionType::SESSION_DEEP_FACTORY_RESET,          "deepFactoryReset"},
+    {SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO, "getDeepFactoryResetInfo"},
     {SessionType::SESSION_VERIFY_PACKAGE,              "verifyPackage"},
     {SessionType::SESSION_CANCEL_UPGRADE,              "cancel"},
     {SessionType::SESSION_GET_CUR_VERSION,             "getCurrentVersionInfo"},

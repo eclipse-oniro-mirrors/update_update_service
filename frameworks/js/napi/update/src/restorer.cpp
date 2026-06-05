@@ -15,6 +15,7 @@
 
 #include "restorer.h"
 
+#include "client_helper.h"
 #include "update_service_kits.h"
 
 namespace OHOS::UpdateService {
@@ -32,6 +33,22 @@ napi_value Restorer::Napi::ForceFactoryReset(napi_env env, napi_callback_info in
     Restorer* restorer = UnwrapJsObject<Restorer>(env, info);
     PARAM_CHECK_NAPI_CALL(env, restorer != nullptr, return nullptr, "Error get restorer");
     return restorer->ForceFactoryReset(env, info);
+}
+
+napi_value Restorer::Napi::DeepFactoryReset(napi_env env, napi_callback_info info)
+{
+    ENGINE_LOGI("Restorer::Napi::DeepFactoryReset");
+    Restorer* restorer = UnwrapJsObject<Restorer>(env, info);
+    PARAM_CHECK_NAPI_CALL(env, restorer != nullptr, return nullptr, "Error get restorer");
+    return restorer->DeepFactoryReset(env, info);
+}
+
+napi_value Restorer::Napi::GetDeepFactoryResetInfo(napi_env env, napi_callback_info info)
+{
+    ENGINE_LOGI("Restorer::Napi::GetDeepFactoryResetInfo");
+    Restorer* restorer = UnwrapJsObject<Restorer>(env, info);
+    PARAM_CHECK_NAPI_CALL(env, restorer != nullptr, return nullptr, "Error get restorer");
+    return restorer->GetDeepFactoryResetInfo(env, info);
 }
 
 Restorer::Restorer(napi_env env, napi_value thisVar)
@@ -65,5 +82,60 @@ napi_value Restorer::ForceFactoryReset(napi_env env, napi_callback_info info)
         });
     PARAM_CHECK(retValue != nullptr, return nullptr, "Failed to FactoryReset.");
     return retValue;
+}
+
+int32_t Restorer::ParseParamResetStrategy(napi_env env, napi_callback_info info)
+{
+    size_t argc = MAX_ARGC;
+    napi_value args[MAX_ARGC] = { 0 };
+    napi_status status = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    PARAM_CHECK_NAPI_CALL(env, status == napi_ok, return -1, "Error to get cb info.");
+    ClientStatus ret = ClientHelper::GetFactoryResetStrategyFromArg(env, args[0], factoryResetStrategy_);
+    PARAM_CHECK(ret == ClientStatus::CLIENT_SUCCESS, return -1, "Failed to get factoryResetStrategy param");
+    return 0;
+}
+
+napi_value Restorer::DeepFactoryReset(napi_env env, napi_callback_info info)
+{
+    int32_t ret = ParseParamResetStrategy(env, info);
+    PARAM_CHECK(ret == 0, return nullptr, "Failed to parse param factoryResetStrategy.");
+    SessionParams sessionParams(SessionType::SESSION_DEEP_FACTORY_RESET, CALLBACK_POSITION_TWO, true);
+    napi_value retValue = StartSession(env, info, sessionParams,
+        [=](void *context) -> int {
+            BusinessError *businessError = reinterpret_cast<BusinessError *>(context);
+            return UpdateServiceKits::GetInstance().DeepFactoryReset(factoryResetStrategy_, *businessError);
+        });
+    PARAM_CHECK(retValue != nullptr, return nullptr, "Failed to DeepFactoryReset.");
+    return retValue;
+}
+
+napi_value Restorer::GetDeepFactoryResetInfo(napi_env env, napi_callback_info info)
+{
+    int32_t ret = ParseParamResetStrategy(env, info);
+    PARAM_CHECK(ret == 0, return nullptr, "Failed to parse param factoryResetStrategy.");
+    SessionParams sessionParams(SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO, CALLBACK_POSITION_TWO, true);
+    napi_value retValue = StartSession(env, info, sessionParams,
+        [=](void *context) -> int {
+            BusinessError *businessError = reinterpret_cast<BusinessError *>(context);
+            return UpdateServiceKits::GetInstance().GetDeepFactoryResetInfo(factoryResetStrategy_, factoryResetInfo_,
+                *businessError);
+        });
+    PARAM_CHECK(retValue != nullptr, return nullptr, "Failed to GetDeepFactoryResetInfo.");
+    return retValue;
+}
+
+void Restorer::GetUpdateResult(uint32_t type, UpdateResult &result)
+{
+    ENGINE_LOGI("GetUpdateResult type %{public}d", type);
+    result.type = type;
+    switch (type) {
+        case SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO:
+            result.result.factoryResetInfo = &factoryResetInfo_;
+            result.buildJSObject = ClientHelper::BuildFactoryResetInfo;
+            break;
+        default:
+            result.buildJSObject = ClientHelper::BuildUndefinedStatus;
+            break;
+    }
 }
 } // namespace OHOS::UpdateService

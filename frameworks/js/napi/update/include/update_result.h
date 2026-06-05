@@ -18,6 +18,7 @@
 
 #include "check_result.h"
 #include "current_version_info.h"
+#include "factory_reset_info.h"
 #include "napi_structs_base.h"
 #include "new_version_info.h"
 #include "progress.h"
@@ -40,6 +41,7 @@ public:
         CheckResult *checkResult;
         CurrentVersionInfo *currentVersionInfo;
         TaskInfo *taskInfo;
+        FactoryResetInfo *factoryResetInfo;
     };
 
     ResultUnion result;
@@ -60,6 +62,8 @@ public:
             ReleaseValue<CurrentVersionInfo>(result.currentVersionInfo);
         } else if (type == SessionType::SESSION_GET_POLICY) {
             ReleaseValue<UpgradePolicy>(result.upgradePolicy);
+        } else if (type == SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO) {
+            ReleaseValue<FactoryResetInfo>(result.factoryResetInfo);
         } else {
             ENGINE_LOGI("UpdateResult Release, unknow type");
         }
@@ -92,6 +96,9 @@ public:
                 updateResult.result.currentVersionInfo, result.currentVersionInfo);
         } else if (type == SessionType::SESSION_GET_POLICY) {
             AssignValue<UpgradePolicy>(updateResult.result.upgradePolicy, result.upgradePolicy);
+        } else if (type == SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO) {
+            AssignValue<FactoryResetInfo>(
+                updateResult.result.factoryResetInfo, result.factoryResetInfo);
         } else {
             ENGINE_LOGI("UpdateResult unknow type");
         }

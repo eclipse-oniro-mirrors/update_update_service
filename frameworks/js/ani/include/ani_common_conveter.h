@@ -25,6 +25,8 @@
 #include "description_options.h"
 #include "download_options.h"
 #include "event_info.h"
+#include "factory_reset_info.h"
+#include "factory_reset_strategy.h"
 #include "pause_download_options.h"
 #include "resume_download_options.h"
 #include "upgrade_status.h"
@@ -62,6 +64,8 @@ public:
     static ohos::update::UpgradePeriod Converter(const UpgradePeriod &upgradePeriod);
     static taihe::array<ohos::update::UpgradePeriod> Converter(const std::vector<UpgradePeriod> &upgradePeriods);
     static ohos::update::EventInfo Converter(const EventInfo &info);
+    static ohos::update::FactoryResetInfo Converter(const FactoryResetInfo &factoryResetInfo);
+    static FactoryResetStrategy Converter(const ohos::update::FactoryResetStrategy &factoryResetStrategy);
     static VersionDigestInfo Converter(const ohos::update::VersionDigestInfo &versionDigestInfo);
     static DescriptionOptions Converter(const ohos::update::DescriptionOptions &descriptionOptions);
     static DownloadOptions Converter(const ohos::update::DownloadOptions &downloadOptions);

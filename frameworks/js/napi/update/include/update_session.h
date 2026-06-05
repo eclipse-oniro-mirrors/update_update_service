@@ -75,6 +75,10 @@ public:
     {
         result.businessError = businessError_;
         IUpdater *migrateClient = static_cast<IUpdater *>(client_);
+        if (migrateClient == nullptr) {
+            ENGINE_LOGE("migrateClient is nullptr");
+            return;
+        }
         migrateClient->GetUpdateResult(sessionParams_.type, result);
     }
 
@@ -82,7 +86,9 @@ public:
 
     std::string GetFunctionPermissionName() override
     {
-        if (sessionParams_.type == SessionType::SESSION_FACTORY_RESET) {
+        if (sessionParams_.type == SessionType::SESSION_FACTORY_RESET ||
+            sessionParams_.type == SessionType::SESSION_DEEP_FACTORY_RESET ||
+            sessionParams_.type == SessionType::SESSION_GET_DEEP_FACTORY_RESET_INFO) {
             return "ohos.permission.FACTORY_RESET";
         } else {
             return "ohos.permission.UPDATE_SYSTEM";
@@ -123,6 +129,12 @@ public:
     ~UpdatePromiseSession() override = default;
 
     void CompleteWork(napi_env env, napi_status status) override;
+    void GetUpdateResult(UpdateResult &result)
+    {
+        result.businessError = businessError_;
+        IUpdater *restorerClient = static_cast<IUpdater *>(client_);
+        restorerClient->GetUpdateResult(sessionParams_.type, result);
+    }
 };
 
 class UpdateListener : public NapiSession {
