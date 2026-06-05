@@ -44,6 +44,8 @@ protected:
 
 private:
     BusinessError GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode);
+    std::string GetCommonErrorMessage(const std::string &funcName, int32_t ipcRequestCode);
+    std::string GetComponentErrorMessage(int32_t ipcRequestCode);
     bool IsCommonError(CallResult callResult);
     int32_t ConvertToErrorCode(CallResult callResult);
 

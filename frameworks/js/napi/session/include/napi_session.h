@@ -93,7 +93,7 @@ protected:
         return "";
     }
 
-    void BuildWorkBusinessErr(BusinessError &businessError)
+    std::string GetCommonErrorMessage()
     {
         std::string msg = "execute error";
         std::string funcName;
@@ -105,21 +105,32 @@ protected:
             case INT_APP_NOT_GRANTED:
                 GetSessionFuncParameter(funcName, permissionName);
                 msg = "BusinessError " + std::to_string(workResult_) + ": Permission denied. An attempt was made to " +
-                      funcName + " forbidden by permission: " + permissionName + ".";
+                    funcName + " forbidden by permission: " + permissionName + ".";
                 break;
             case INT_MDM_DISABLE_RESET:
-                msg = "BusinessError " + std::to_string(workResult_) + ": This function is prohibited by enterprise management policies.";
-                break;
-            case INT_CALL_IPC_ERR:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IPC error.";
+                msg = "BusinessError " + std::to_string(workResult_) +
+                    ": This function is prohibited by enterprise management policies.";
                 break;
             case INT_UN_SUPPORT:
                 GetSessionFuncParameter(funcName, permissionName);
                 msg = "BusinessError " + std::to_string(workResult_) + ": Capability not supported. " +
-                      "function " + funcName + " can not work correctly due to limited device capabilities.";
+                "function " + funcName + " can not work correctly due to limited device capabilities.";
                 break;
             case INT_PARAM_ERR:
                 msg = "BusinessError " + std::to_string(workResult_) + ": Parameter verification failed.";
+                break;
+            default:
+                msg = "";
+                break;
+        }
+        return msg;
+    }
+
+    std::string GetComponentErrorMessage()
+    {
+        switch (workResult_) {
+            case INT_CALL_IPC_ERR:
+                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IPC error.";
                 break;
             case INT_CALL_FAIL:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Execute fail.";
@@ -143,9 +154,16 @@ protected:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Network error.";
                 break;
             default:
+                msg = "";
                 break;
         }
-        businessError.Build(static_cast<CallResult>(workResult_), msg);
+        return msg;
+    }
+
+    void BuildWorkBusinessErr(BusinessError &businessError)
+    {
+        std::string message = GetComponentErrorMessage() + GetCommonErrorMessage();     
+        businessError.Build(static_cast<CallResult>(workResult_), message);
     }
 
     void GetBusinessError(BusinessError &businessError, const NapiResult &result)

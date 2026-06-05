@@ -104,31 +104,12 @@ int32_t AniBaseUpdater::ConvertToErrorCode(CallResult callResult)
     return componentErr + CAST_INT(callResult);
 }
 
-BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode)
+std::string  AniBaseUpdater::GetComponentErrorMessage(int32_t ipcRequestCode)
 {
-    BusinessError businessError;
-    std::string msg = "execute error";
     const auto ipcCallResult = static_cast<CallResult>(ipcRequestCode);
     const std::string callResultStr = std::to_string(ConvertToErrorCode(ipcCallResult));
-
+    std::string msg = "";
     switch (ipcRequestCode) {
-        case INT_NOT_SYSTEM_APP:
-            msg = "BusinessError " + callResultStr + NOT_SYSTEM_APP_INFO.data();
-            break;
-        case INT_APP_NOT_GRANTED:
-            msg = "BusinessError " + callResultStr + ": Permission denied. An attempt was made to " + funcName +
-                " forbidden by permission: " + GetPermissionName() + ".";
-            break;
-        case INT_MDM_DISABLE_RESET:
-                msg = "BusinessError " + std::to_string(workResult_) + ": This function is prohibited by enterprise management policies.";
-                break;
-        case INT_CALL_IPC_ERR:
-            msg = "BusinessError " + callResultStr + ": IPC error.";
-            break;
-        case INT_UN_SUPPORT:
-            msg = "BusinessError " + callResultStr + ": Capability not supported. " + "function " + funcName +
-                " can not work correctly due to limited device capabilities.";
-            break;
         case INT_PARAM_ERR:
             msg = "param error";
             break;
@@ -154,8 +135,47 @@ BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, i
             msg = "BusinessError " + callResultStr + ": Network error.";
             break;
         default:
+            msg = "";
             break;
     }
+    return msg;
+}
+
+std::string  AniBaseUpdater::GetCommonErrorMessage(const std::string &funcName, int32_t ipcRequestCode)
+{
+    std::string msg = "";
+    const auto ipcCallResult = static_cast<CallResult>(ipcRequestCode);
+    const std::string callResultStr = std::to_string(ConvertToErrorCode(ipcCallResult));
+    switch (ipcRequestCode) {
+        case INT_NOT_SYSTEM_APP:
+            msg = "BusinessError " + callResultStr + NOT_SYSTEM_APP_INFO.data();
+            break;
+        case INT_APP_NOT_GRANTED:
+            msg = "BusinessError " + callResultStr + ": Permission denied. An attempt was made to " + funcName +
+                " forbidden by permission: " + GetPermissionName() + ".";
+            break;
+        case INT_MDM_DISABLE_RESET:
+                msg = "BusinessError " + std::to_string(workResult_) +
+                    ": This function is prohibited by enterprise management policies.";
+                break;
+        case INT_CALL_IPC_ERR:
+            msg = "BusinessError " + callResultStr + ": IPC error.";
+            break;
+        case INT_UN_SUPPORT:
+            msg = "BusinessError " + callResultStr + ": Capability not supported. " + "function " + funcName +
+                " can not work correctly due to limited device capabilities.";
+            break;
+        default:
+            msg = "";
+            break;
+    }
+    return msg;
+}
+
+BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode)
+{
+    BusinessError businessError;
+    std::string message = GetComponentErrorMessage(ipcRequestCode) + GetCommonErrorMessage(funcName, ipcRequestCode);
     businessError.Build(static_cast<CallResult>(ipcRequestCode), msg);
     return businessError;
 }
