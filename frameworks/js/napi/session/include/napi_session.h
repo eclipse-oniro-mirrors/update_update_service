@@ -95,7 +95,7 @@ protected:
 
     std::string GetCommonErrorMessage()
     {
-        std::string msg = "execute error";
+        std::string msg = "";
         std::string funcName;
         std::string permissionName;
         switch (workResult_) {
@@ -128,6 +128,7 @@ protected:
 
     std::string GetComponentErrorMessage()
     {
+        std::string msg = "";
         switch (workResult_) {
             case INT_CALL_IPC_ERR:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IPC error.";
@@ -163,6 +164,9 @@ protected:
     void BuildWorkBusinessErr(BusinessError &businessError)
     {
         std::string message = GetComponentErrorMessage() + GetCommonErrorMessage();
+        if (message.empty()) {
+            message = "execute error";
+        }
         businessError.Build(static_cast<CallResult>(workResult_), message);
     }
 

@@ -176,6 +176,9 @@ BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, i
 {
     BusinessError businessError;
     std::string message = GetComponentErrorMessage(ipcRequestCode) + GetCommonErrorMessage(funcName, ipcRequestCode);
+    if (message.empty()) {
+        message = "execute error";
+    }
     businessError.Build(static_cast<CallResult>(ipcRequestCode), msg);
     return businessError;
 }
