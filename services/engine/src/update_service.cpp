@@ -57,9 +57,7 @@ namespace UpdateService {
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
 const std::unordered_set<uint32_t> RESET_CODES = {
-    CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET),
-    CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
-    CAST_UINT(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET)
+    CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET)
 };
 REGISTER_SYSTEM_ABILITY_BY_ID(UpdateService, UPDATE_DISTRIBUTED_SERVICE_ID, true)
 
