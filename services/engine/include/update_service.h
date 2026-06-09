@@ -171,7 +171,6 @@ private:
     std::shared_ptr<UpdateServiceImplManager> updateImplMgr_ = nullptr;
     static const std::unordered_set<uint32_t> RESET_CODES;
     static constexpr std::string_view MDM_DISABLE_RESET_PARA = "persist.edm.factory_reset_disabled";
-    static constexpr std::string_view DEFAULT_MDM_DISABLE_RESET_PARA = "false";
 };
 
 } // namespace UpdateService
