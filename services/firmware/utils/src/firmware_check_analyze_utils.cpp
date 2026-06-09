@@ -187,17 +187,15 @@ int32_t FirmwareCheckAnalyzeUtils::ProcessCheckResults(cJSON *checkResults)
             continue;
         }
         FirmwareComponent component;
-        int32_t componetSize = 0;
 
         // 获取组件相关属性
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "descriptPackageId", component.descriptPackageId);
         ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "url", component.url);
-        ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "size", componetSize);
-        if (componetSize <= 0) {
+        ret += UpdateServiceJsonUtils::GetValueAndSetTo(itemResult, "size", component.size);
+        if (component.size <= 0) {
             FIRMWARE_LOGE("componetSize is illegal");
             continue;
         }
-        component.size = static_cast<int64_t>(componetSize);
         component.fileName = StringUtils::GetLastSplitString(component.url, "/");
         if (!IsValidFileName(component.fileName)) {
             FIRMWARE_LOGE("fileName illegal, %{public}d, %{public}s", i, component.fileName.c_str());
