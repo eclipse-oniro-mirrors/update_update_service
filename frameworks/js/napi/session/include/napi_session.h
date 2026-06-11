@@ -120,7 +120,6 @@ protected:
                 msg = "BusinessError " + std::to_string(workResult_) + ": Parameter verification failed.";
                 break;
             default:
-                msg = "";
                 break;
         }
         return msg;
@@ -155,7 +154,6 @@ protected:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Network error.";
                 break;
             default:
-                msg = "";
                 break;
         }
         return msg;

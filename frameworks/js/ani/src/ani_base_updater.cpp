@@ -135,7 +135,6 @@ std::string  AniBaseUpdater::GetComponentErrorMessage(int32_t ipcRequestCode)
             msg = "BusinessError " + callResultStr + ": Network error.";
             break;
         default:
-            msg = "";
             break;
     }
     return msg;
@@ -166,7 +165,6 @@ std::string  AniBaseUpdater::GetCommonErrorMessage(const std::string &funcName, 
                 " can not work correctly due to limited device capabilities.";
             break;
         default:
-            msg = "";
             break;
     }
     return msg;
