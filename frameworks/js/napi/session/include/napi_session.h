@@ -93,30 +93,29 @@ protected:
         return "";
     }
 
-    void BuildWorkBusinessErr(BusinessError &businessError)
+    std::string GetIpcErrorMessage(const std::string &funcName, const std::string &permissionName, std::string msg)
     {
-        std::string msg = "execute error";
-        std::string funcName;
-        std::string permissionName;
         switch (workResult_) {
             case INT_NOT_SYSTEM_APP:
                 msg = "BusinessError " + std::to_string(workResult_) + NOT_SYSTEM_APP_INFO.data();
                 break;
             case INT_APP_NOT_GRANTED:
-                GetSessionFuncParameter(funcName, permissionName);
                 msg = "BusinessError " + std::to_string(workResult_) + ": Permission denied. An attempt was made to " +
-                      funcName + " forbidden by permission: " + permissionName + ".";
+                    funcName + " forbidden by permission: " + permissionName + ".";
                 break;
             case INT_CALL_IPC_ERR:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IPC error.";
                 break;
             case INT_UN_SUPPORT:
-                GetSessionFuncParameter(funcName, permissionName);
                 msg = "BusinessError " + std::to_string(workResult_) + ": Capability not supported. " +
                       "function " + funcName + " can not work correctly due to limited device capabilities.";
                 break;
             case INT_PARAM_ERR:
                 msg = "BusinessError " + std::to_string(workResult_) + ": Parameter verification failed.";
+                break;
+            case INT_MDM_DISABLE_RESET:
+                msg = "BusinessError " + std::to_string(workResult_) +
+                    ": This function is prohibited by enterprise management policies.";
                 break;
             case INT_CALL_FAIL:
                 msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Execute fail.";
@@ -142,59 +141,17 @@ protected:
             default:
                 break;
         }
-        businessError.Build(static_cast<CallResult>(workResult_), msg);
+        return msg;
     }
 
-void BuildErrorMessage()
+    void BuildWorkBusinessErr(BusinessError &businessError)
     {
-        std::string msg = "execute error";
+        std::string message = "execute error";
         std::string funcName;
         std::string permissionName;
-        switch (workResult_) {
-            case INT_NOT_SYSTEM_APP:
-                msg = "BusinessError " + std::to_string(workResult_) + NOT_SYSTEM_APP_INFO.data();
-                break;
-            case INT_APP_NOT_GRANTED:
-                GetSessionFuncParameter(funcName, permissionName);
-                msg = "BusinessError " + std::to_string(workResult_) + ": Permission denied. An attempt was made to " +
-                      funcName + " forbidden by permission: " + permissionName + ".";
-                break;
-            case INT_CALL_IPC_ERR:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IPC error.";
-                break;
-            case INT_UN_SUPPORT:
-                GetSessionFuncParameter(funcName, permissionName);
-                msg = "BusinessError " + std::to_string(workResult_) + ": Capability not supported. " +
-                      "function " + funcName + " can not work correctly due to limited device capabilities.";
-                break;
-            case INT_PARAM_ERR:
-                msg = "BusinessError " + std::to_string(workResult_) + ": Parameter verification failed.";
-                break;
-            case INT_CALL_FAIL:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Execute fail.";
-                break;
-            case INT_FORBIDDEN:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Forbidden execution.";
-                break;
-            case INT_DEV_UPG_INFO_ERR:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Device info error.";
-                break;
-            case INT_TIME_OUT:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Execute timeout.";
-                break;
-            case INT_DB_ERROR:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": DB error.";
-                break;
-            case INT_IO_ERROR:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": IO error.";
-                break;
-            case INT_NET_ERROR:
-                msg = "BusinessError " + std::to_string(COMPONENT_ERR + workResult_) + ": Network error.";
-                break;
-            default:
-                break;
-        }
-        businessError.Build(static_cast<CallResult>(workResult_), msg);
+        GetSessionFuncParameter(funcName, permissionName);
+        message = GetIpcErrorMessage(funcName, permissionName, message);
+        businessError.Build(static_cast<CallResult>(workResult_), message);
     }
 
     void GetBusinessError(BusinessError &businessError, const NapiResult &result)

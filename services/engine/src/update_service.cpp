@@ -56,9 +56,6 @@ namespace OHOS {
 namespace UpdateService {
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
-const std::unordered_set<uint32_t> RESET_CODES = {
-    CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET)
-};
 REGISTER_SYSTEM_ABILITY_BY_ID(UpdateService, UPDATE_DISTRIBUTED_SERVICE_ID, true)
 
 OHOS::sptr<UpdateService> UpdateService::updateService_ { nullptr };
@@ -585,7 +582,7 @@ int32_t UpdateService::PermissionCheck(uint32_t code)
         return INT_APP_NOT_GRANTED;
     }
 
-    if (IsMdmDisableReset(code)) {
+    if (IsResetDisabledByMdm(code)) {
         ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
         return INT_MDM_DISABLE_RESET;
     }
@@ -665,9 +662,12 @@ bool UpdateService::IsPermissionGranted(uint32_t code)
     return isPermissionGranted;
 }
 
-bool UpdateService::IsMdmDisableReset(uint32_t code)
+bool UpdateService::IsResetDisabledByMdm(uint32_t code)
 {
-    if (OHOS::UpdateService::RESET_CODES.find(code) != OHOS::UpdateService::RESET_CODES.end()) {
+    const std::unordered_set<uint32_t> resetCodes = {
+        CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET)
+    };
+    if (resetCodes.count(code)) {
         return OHOS::system::GetBoolParameter(MDM_DISABLE_RESET_PARA.data(), false);
     }
     return false;
