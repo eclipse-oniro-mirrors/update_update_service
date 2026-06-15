@@ -103,13 +103,9 @@ int32_t AniBaseUpdater::ConvertToErrorCode(CallResult callResult)
     return componentErr + CAST_INT(callResult);
 }
 
-BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode)
+void AniBaseUpdater::GetIpcErrorMessage(const std::string &funcName, int32_t ipcRequestCode,
+    const std::string &callResultStr, std::string &msg)
 {
-    BusinessError businessError;
-    std::string msg = "execute error";
-    const auto ipcCallResult = static_cast<CallResult>(ipcRequestCode);
-    const std::string callResultStr = std::to_string(ConvertToErrorCode(ipcCallResult));
-
     switch (ipcRequestCode) {
         case INT_NOT_SYSTEM_APP:
             msg = "BusinessError " + callResultStr + NOT_SYSTEM_APP_INFO.data();
@@ -127,6 +123,10 @@ BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, i
             break;
         case INT_PARAM_ERR:
             msg = "param error";
+            break;
+        case INT_MDM_DISABLE_RESET:
+            msg = "BusinessError " + callResultStr +
+                ": This function is prohibited by enterprise management policies.";
             break;
         case INT_CALL_FAIL:
             msg = "BusinessError " + callResultStr + ": Execute fail.";
@@ -152,7 +152,18 @@ BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, i
         default:
             break;
     }
-    businessError.Build(static_cast<CallResult>(ipcRequestCode), msg);
+}
+
+BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode)
+{
+    BusinessError businessError;
+    std::string errorMessage = "execute error";
+    const auto ipcCallResult = static_cast<CallResult>(ipcRequestCode);
+    const std::string ipcCallResultStr = std::to_string(ConvertToErrorCode(ipcCallResult));
+
+    GetIpcErrorMessage(funcName, ipcRequestCode, ipcCallResultStr, errorMessage);
+    businessError.Build(static_cast<CallResult>(ipcRequestCode), errorMessage);
     return businessError;
 }
+
 }

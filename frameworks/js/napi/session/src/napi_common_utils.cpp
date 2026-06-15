@@ -363,7 +363,8 @@ napi_value NapiCommonUtils::BuildCallFuncResult(napi_env env, const BusinessErro
 bool NapiCommonUtils::IsCommonError(CallResult callResult)
 {
     return callResult == CallResult::UN_SUPPORT || callResult == CallResult::NOT_SYSTEM_APP ||
-        callResult == CallResult::APP_NOT_GRANTED || callResult == CallResult::PARAM_ERR;
+        callResult == CallResult::APP_NOT_GRANTED || callResult == CallResult::PARAM_ERR ||
+        callResult == CallResult::MDM_DISABLE_RESET;
 }
 
 void NapiCommonUtils::BuildErrorMessages(napi_env env, napi_value &obj, const std::string &name,
