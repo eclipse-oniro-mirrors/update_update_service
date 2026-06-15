@@ -103,7 +103,7 @@ int32_t AniBaseUpdater::ConvertToErrorCode(CallResult callResult)
     return componentErr + CAST_INT(callResult);
 }
 
-std::string AniBaseUpdater::GetIpcErrorMessage(const std::string &funcName, int32_t ipcRequestCode,
+void AniBaseUpdater::GetIpcErrorMessage(const std::string &funcName, int32_t ipcRequestCode,
     const std::string &callResultStr, std::string &msg)
 {
     switch (ipcRequestCode) {
@@ -158,12 +158,12 @@ std::string AniBaseUpdater::GetIpcErrorMessage(const std::string &funcName, int3
 BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode)
 {
     BusinessError businessError;
-    std::string msg = "execute error";
+    std::string errorMessage = "execute error";
     const auto ipcCallResult = static_cast<CallResult>(ipcRequestCode);
     const std::string ipcCallResultStr = std::to_string(ConvertToErrorCode(ipcCallResult));
 
-    std::string message = GetIpcErrorMessage(funcName, ipcRequestCode, ipcCallResultStr, msg);
-    businessError.Build(static_cast<CallResult>(ipcRequestCode), message);
+    GetIpcErrorMessage(funcName, ipcRequestCode, ipcCallResultStr, errorMessage);
+    businessError.Build(static_cast<CallResult>(ipcRequestCode), errorMessage);
     return businessError;
 }
 

@@ -93,7 +93,7 @@ protected:
         return "";
     }
 
-    std::string GetIpcErrorMessage(const std::string &funcName, const std::string &permissionName, std::string msg)
+    void GetIpcErrorMessage(const std::string &funcName, const std::string &permissionName, std::string &msg)
     {
         switch (workResult_) {
             case INT_NOT_SYSTEM_APP:
@@ -150,7 +150,7 @@ protected:
         std::string funcName;
         std::string permissionName;
         GetSessionFuncParameter(funcName, permissionName);
-        message = GetIpcErrorMessage(funcName, permissionName, message);
+        GetIpcErrorMessage(funcName, permissionName, message);
         businessError.Build(static_cast<CallResult>(workResult_), message);
     }
 

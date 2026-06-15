@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <thread>
-#include <unordered_set>
 
 #include "if_system_ability_manager.h"
 #include "ipc_skeleton.h"
@@ -169,7 +168,6 @@ private:
     std::map<UpgradeInfo, ClientProxy> clientProxyMap_;
     static sptr<UpdateService> updateService_;
     std::shared_ptr<UpdateServiceImplManager> updateImplMgr_ = nullptr;
-    static constexpr std::string_view MDM_DISABLE_RESET_PARA = "persist.edm.reset_factory_disallowed";
 };
 
 } // namespace UpdateService

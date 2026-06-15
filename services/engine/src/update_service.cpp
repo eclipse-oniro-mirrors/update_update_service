@@ -35,7 +35,6 @@
 #include "parameters.h"
 #include "securec.h"
 #include "startup_manager.h"
-#include "string_utils.h"
 #include "tokenid_kit.h"
 #include "update_log.h"
 #include "update_service_cache.h"
@@ -56,6 +55,7 @@ namespace OHOS {
 namespace UpdateService {
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
+constexpr std::string_view MDM_DISABLE_RESET_PARA = "persist.edm.reset_factory_disallowed";
 REGISTER_SYSTEM_ABILITY_BY_ID(UpdateService, UPDATE_DISTRIBUTED_SERVICE_ID, true)
 
 OHOS::sptr<UpdateService> UpdateService::updateService_ { nullptr };
