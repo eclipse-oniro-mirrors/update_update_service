@@ -141,7 +141,6 @@ protected:
             default:
                 break;
         }
-        return msg;
     }
 
     void BuildWorkBusinessErr(BusinessError &businessError)

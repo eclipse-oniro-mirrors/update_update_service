@@ -152,7 +152,6 @@ void AniBaseUpdater::GetIpcErrorMessage(const std::string &funcName, int32_t ipc
         default:
             break;
     }
-    return msg;
 }
 
 BusinessError AniBaseUpdater::GetIpcBusinessError(const std::string &funcName, int32_t ipcRequestCode)
