@@ -53,7 +53,9 @@ ohos_shared_library("$updateengine_client_library_name") {
     "cJSON:cjson",
     "hilog:libhilog",
     "ipc:ipc_core",
+    "libuv:uv",
     "napi:ace_napi",
+    "node:node_header_notice",
   ]
 
   if (ability_ability_runtime_enable) {
