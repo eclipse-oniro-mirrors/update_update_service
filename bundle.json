@@ -39,6 +39,7 @@
         "safwk",
         "samgr",
         "napi",
+        "node",
         "access_token",
         "hisysevent",
         "init",

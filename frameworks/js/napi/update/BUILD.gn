@@ -54,6 +54,7 @@ ohos_shared_library("$updateengine_client_library_name") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "napi:ace_napi",
+    "node:node_header_notice",
   ]
 
   if (ability_ability_runtime_enable) {
