@@ -36,7 +36,6 @@
         "eventhandler",
         "hilog",
         "ipc",
-        "libuv",
         "safwk",
         "samgr",
         "napi",

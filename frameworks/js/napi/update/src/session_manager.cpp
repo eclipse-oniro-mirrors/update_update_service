@@ -15,8 +15,6 @@
 
 #include "session_manager.h"
 
-#include <uv.h>
-
 #include "napi/native_node_api.h"
 #include "node_api.h"
 
