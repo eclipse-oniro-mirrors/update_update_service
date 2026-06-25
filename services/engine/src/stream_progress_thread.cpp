@@ -126,7 +126,6 @@ bool StreamProgressThread::CheckFileSize()
 
     // 转换为整数并比较
     int64_t fileSize = std::stoll(match.str());
-    ENGINE_LOGE("XXXYYYZZZ: fileSize:%{public}lld totalFileSize_:%{public}lld", fileSize, totalFileSize_);
     if (fileSize <= 0 || fileSize != totalFileSize_) {
         ENGINE_LOGE("File size mismatch fileSize:%{public}lld totalFileSize_:%{public}lld", fileSize, totalFileSize_);
         return false;
