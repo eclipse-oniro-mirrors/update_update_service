@@ -134,6 +134,7 @@ private:
     bool DealExitOrCancel();
     bool CheckFileSize();
     bool DownloadFile();
+    static size_t HeaderCallback(char* buffer, size_t size, size_t nmemb, void* userp);
     
 private:
     Progress downloadProgress_ {};
