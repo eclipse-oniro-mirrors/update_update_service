@@ -93,6 +93,8 @@ bool StreamProgressThread::CheckFileSize()
         return false;
     }
 
+
+
     // 获取文件大小
     double fileSize = 0;
     res = curl_easy_getinfo(downloadHandle_, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &fileSize);
