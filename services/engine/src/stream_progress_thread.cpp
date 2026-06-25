@@ -18,6 +18,7 @@
 #include <file_utils.h>
 #include <unistd.h>
 #include <cinttypes>
+#include <regex>
 
 #include "curl/curl.h"
 #include "curl/easy.h"
@@ -79,7 +80,6 @@ bool StreamProgressThread::ProcessThreadExecute()
     return false;
 }
 
-/ 回调函数：接收 HTTP 头部
 size_t StreamProgressThread::HeaderCallback(char* buffer, size_t size, size_t nmemb, void* userp)
 {
     size_t realsize = size * nmemb;
@@ -93,21 +93,18 @@ bool StreamProgressThread::CheckFileSize()
     CURLcode res;
     std::string headerData;
 
-    // 设置 CURL 选项
     curl_easy_setopt(downloadHandle_, CURLOPT_URL, serverUrl_.c_str());
-    curl_easy_setopt(downloadHandle_, CURLOPT_NOBODY, 1L); // 只获取头部信息
-    curl_easy_setopt(downloadHandle_, CURLOPT_FOLLOWLOCATION, 1L); // 支持重定向
-    curl_easy_setopt(downloadHandle_, CURLOPT_HEADERFUNCTION, HeaderCallback); // 设置头部回调函数
-    curl_easy_setopt(downloadHandle_, CURLOPT_HEADERDATA, &headerData); // 传递头部数据
+    curl_easy_setopt(downloadHandle_, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(downloadHandle_, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(downloadHandle_, CURLOPT_HEADERFUNCTION, HeaderCallback);
+    curl_easy_setopt(downloadHandle_, CURLOPT_HEADERDATA, &headerData);
 
-    // 执行请求
     res = curl_easy_perform(downloadHandle_);
     if (res != CURLE_OK) {
         ENGINE_LOGE("Failed to curl_easy_perform res %s", curl_easy_strerror(res));
         return false;
     }
 
-    // 解析 Content-Length
     const std::string key = "Content-Length:";
     size_t pos = headerData.find(key);
     if (pos == std::string::npos) {
@@ -115,7 +112,6 @@ bool StreamProgressThread::CheckFileSize()
         return false;
     }
 
-    // 提取数值部分
     std::string lenStr = headerData.substr(pos + key.length());
     std::regex pattern(R"(\d+)");
     std::smatch match;
@@ -124,7 +120,6 @@ bool StreamProgressThread::CheckFileSize()
         return false;
     }
 
-    // 转换为整数并比较
     int64_t fileSize = std::stoll(match.str());
     if (fileSize <= 0 || fileSize != totalFileSize_) {
         ENGINE_LOGE("File size mismatch fileSize:%{public}lld totalFileSize_:%{public}lld", fileSize, totalFileSize_);
