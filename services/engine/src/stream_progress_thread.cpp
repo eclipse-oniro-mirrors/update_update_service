@@ -18,6 +18,7 @@
 #include <file_utils.h>
 #include <unistd.h>
 #include <cinttypes>
+#include <regex>
 
 #include "curl/curl.h"
 #include "curl/easy.h"
@@ -79,26 +80,50 @@ bool StreamProgressThread::ProcessThreadExecute()
     return false;
 }
 
+size_t StreamProgressThread::HeaderCallback(char* buffer, size_t size, size_t nmemb, void* userp)
+{
+    size_t realsize = size * nmemb;
+    std::string* header = static_cast<std::string*>(userp);
+    *header += std::string(buffer, realsize);
+    return realsize;
+}
+
 bool StreamProgressThread::CheckFileSize()
 {
     CURLcode res;
-    curl_easy_setopt(downloadHandle_, CURLOPT_TIMEOUT, TIMEOUT_FOR_DOWNLOAD);
-    curl_easy_setopt(downloadHandle_, CURLOPT_CONNECTTIMEOUT, TIMEOUT_FOR_CONNECT);
+    std::string headerData;
+
     curl_easy_setopt(downloadHandle_, CURLOPT_URL, serverUrl_.c_str());
-    curl_easy_setopt(downloadHandle_, CURLOPT_NOBODY, 1L); // 只获取文件头部
-    curl_easy_setopt(downloadHandle_, CURLOPT_HEADER, 1L); // 包含响应头部
+    curl_easy_setopt(downloadHandle_, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(downloadHandle_, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(downloadHandle_, CURLOPT_HEADERFUNCTION, HeaderCallback);
+    curl_easy_setopt(downloadHandle_, CURLOPT_HEADERDATA, &headerData);
+
     res = curl_easy_perform(downloadHandle_);
     if (res != CURLE_OK) {
         ENGINE_LOGE("Failed to curl_easy_perform res %s", curl_easy_strerror(res));
         return false;
     }
 
-    // 获取文件大小
-    double fileSize = 0;
-    res = curl_easy_getinfo(downloadHandle_, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &fileSize);
-    if (res != CURLE_OK || fileSize <= 0 || fileSize != totalFileSize_) {
-        ENGINE_LOGE("Failed to curl_easy_getinfo res:%{public}s fileSize:%{public}f totalFileSize_:%{public}" PRId64 "",
-                    curl_easy_strerror(res), fileSize, totalFileSize_);
+    const std::string key = "Content-Length:";
+    size_t pos = headerData.find(key);
+    if (pos == std::string::npos) {
+        ENGINE_LOGE("Content-Length not found in headers");
+        return false;
+    }
+
+    std::string lenStr = headerData.substr(pos + key.length());
+    std::regex pattern(R"(\d+)");
+    std::smatch match;
+    if (!std::regex_search(lenStr, match, pattern)) {
+        ENGINE_LOGE("Failed to parse Content-Length");
+        return false;
+    }
+
+    int64_t fileSize = std::stoll(match.str());
+    if (fileSize <= 0 || fileSize != totalFileSize_) {
+        ENGINE_LOGE("File size mismatch fileSize:%{public}" PRId64 " totalFileSize_:%{public}" PRId64 "",
+        fileSize, totalFileSize_);
         return false;
     }
     return true;
