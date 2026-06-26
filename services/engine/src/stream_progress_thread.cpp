@@ -122,7 +122,8 @@ bool StreamProgressThread::CheckFileSize()
 
     int64_t fileSize = std::stoll(match.str());
     if (fileSize <= 0 || fileSize != totalFileSize_) {
-        ENGINE_LOGE("File size mismatch fileSize:%{public}" PRId64 " totalFileSize_:%{public}" PRId64 "", fileSize, totalFileSize_);
+        ENGINE_LOGE("File size mismatch fileSize:%{public}" PRId64 " totalFileSize_:%{public}" PRId64 "",
+        fileSize, totalFileSize_);
         return false;
     }
     return true;
