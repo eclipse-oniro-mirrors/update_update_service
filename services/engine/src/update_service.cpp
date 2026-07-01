@@ -665,7 +665,9 @@ bool UpdateService::IsPermissionGranted(uint32_t code)
 bool UpdateService::IsResetDisabledByMdm(uint32_t code)
 {
     const std::unordered_set<uint32_t> resetCodes = {
-        CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET)
+        CAST_UINT(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
+        CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET),
+        CAST_UINT(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET)
     };
     if (resetCodes.count(code)) {
         return OHOS::system::GetBoolParameter(MDM_DISABLE_RESET_PARA.data(), false);
