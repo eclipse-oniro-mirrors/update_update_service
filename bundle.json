@@ -36,7 +36,6 @@
         "eventhandler",
         "hilog",
         "ipc",
-        "jsoncpp",
         "safwk",
         "samgr",
         "napi",
@@ -54,7 +53,8 @@
         "storage_service",
         "time_service",
         "relational_store",
-        "runtime_core"
+        "runtime_core",
+        "jsoncpp"
       ],
       "third_party": []
     },
