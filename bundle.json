@@ -55,7 +55,9 @@
         "relational_store",
         "runtime_core"
       ],
-      "third_party": []
+      "third_party": [
+        "jsoncpp"
+      ]
     },
     "build": {
       "modules": [
