@@ -155,6 +155,7 @@ if (ability_ability_base_enable) {
     "ability_base:base",
     "ability_base:want",
     "ability_runtime:wantagent_innerkits",
+    "jsoncpp:jsoncpp",
     "time_service:time_client",
   ]
 }
@@ -162,6 +163,7 @@ if (ability_ability_runtime_enable) {
   sa_external_deps += [
     "ability_runtime:ability_connect_callback_stub",
     "ability_runtime:extension_manager",
+    "jsoncpp:jsoncpp",
   ]
 }
 
