@@ -54,7 +54,8 @@
         "time_service",
         "relational_store",
         "runtime_core",
-        "jsoncpp"
+        "jsoncpp",
+        "taihe_ffi_gen"
       ],
       "third_party": []
     },
