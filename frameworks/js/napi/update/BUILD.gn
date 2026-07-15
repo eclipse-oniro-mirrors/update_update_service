@@ -19,6 +19,7 @@ ohos_shared_library("$updateengine_client_library_name") {
   sanitize = {
     boundary_sanitize = true
   }
+  branch_protector_ret = "pac_ret"
   sources = []
   if (ability_ability_runtime_enable) {
     sources += [
