@@ -84,7 +84,7 @@ ohos_shared_library("$updateengine_inner_library_name") {
   ]
 
   external_deps = [
-    "bounds_checking_function:libsec_static",
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",  # sptr
     "cJSON:cjson",
     "hilog:libhilog",
