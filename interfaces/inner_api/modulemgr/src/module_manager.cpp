@@ -87,7 +87,6 @@ void ModuleManager::HookFunc(std::vector<uint32_t> codes, RequestFuncType handle
 
     for (const uint32_t code : codes) {
         if (!IsMapFuncExist(code)) {
-            UTILS_LOGI("add code %{public}d", code);
             onRemoteRequestFuncMap_.insert(std::make_pair(code, handleRemoteRequest));
         } else {
             UTILS_LOGI("code %{public}d already exist", code);
