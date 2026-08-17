@@ -152,17 +152,22 @@ void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &eleme
     const sptr<IRemoteObject> &remoteObject, int32_t resultCode)
 {
     ENGINE_LOGI("OnAbilityConnectDone successfully. result %{public}d", resultCode);
+    if (ctx_ == nullptr) {
+        ENGINE_LOGE("ctx is nullptr");
+        return;
+    }
+    std::lock_guard<std::mutex> lock(ctx_->mtx);
     if (resultCode != ERR_OK) {
         ENGINE_LOGE("ability connect failed, error code: %{public}d", resultCode);
+        ctx_->cv.notify_one();
         return;
     }
 
-    if (remoteObject == nullptr || ctx_ == nullptr) {
+    if (remoteObject == nullptr) {
         ENGINE_LOGE("remoteObject or ctx is nullptr");
+        ctx_->cv.notify_one();
         return;
     }
-
-    std::lock_guard<std::mutex> lock(ctx_->mtx);
     ctx_->remote = remoteObject;
     ctx_->cv.notify_one();
 }
