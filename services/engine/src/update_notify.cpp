@@ -102,6 +102,7 @@ bool UpdateNotify::HandleMessage(const std::string &message)
     want.SetParam("Timeout", UPDATE_APP_TIMEOUT);
 
     auto notifyContext = sptr<NotifyConnectContext>::MakeSptr();
+    notifyContext->state = ConnState::WAITING;
     auto connect = sptr<NotifyConnection>::MakeSptr(notifyContext);
 
     ErrCode ret = ConnectAbility(want, connect);
@@ -113,10 +114,10 @@ bool UpdateNotify::HandleMessage(const std::string &message)
 
     std::unique_lock<std::mutex> uniqueLock(notifyContext->mtx);
     bool waitOk = notifyContext->cv.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
-        [ctx = notifyContext]() { return ctx->remote != nullptr; });
-    if (!waitOk || notifyContext->remote == nullptr) {
+        [ctx = notifyContext]() { return ctx->state == ConnState::SUCCESS || ctx->state == ConnState::FAILED; });
+    if (!waitOk || notifyContext->state != ConnState::SUCCESS || notifyContext->remote == nullptr) {
         uniqueLock.unlock();
-        ENGINE_LOGE("HandleMessage, can not connect to ouc (timeout or remote nullptr)");
+        ENGINE_LOGE("HandleMessage connect fail, state:%{public}d", static_cast<int>(notifyContext->state));
         DisconnectAbility(connect);
         return false;
     }
@@ -157,18 +158,25 @@ void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &eleme
         return;
     }
     std::lock_guard<std::mutex> lock(ctx_->mtx);
+    if (ctx_->state != ConnState::WAITING) {
+        ENGINE_LOGE("OnAbilityConnectDone skip, task finished already");
+        return;
+    }
     if (resultCode != ERR_OK) {
         ENGINE_LOGE("ability connect failed, error code: %{public}d", resultCode);
+        ctx_->state = ConnState::FAILED;
         ctx_->cv.notify_one();
         return;
     }
 
     if (remoteObject == nullptr) {
         ENGINE_LOGE("remoteObject or ctx is nullptr");
+        ctx_->state = ConnState::FAILED;
         ctx_->cv.notify_one();
         return;
     }
     ctx_->remote = remoteObject;
+    ctx_->state = ConnState::SUCCESS;
     ctx_->cv.notify_one();
 }
 

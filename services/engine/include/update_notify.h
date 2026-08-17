@@ -31,10 +31,18 @@
 
 namespace OHOS {
 namespace UpdateService {
+enum class ConnectState {
+    IDLE,
+    WAITING,
+    SUCCESS,
+    FAILED
+};
+
 struct NotifyConnectContext : public RefBase {
     std::mutex mtx;
     std::condition_variable cv;
     sptr<IRemoteObject> remote = nullptr;
+    ConnState state = ConnectState::IDLE;
 };
 
 class UpdateNotify : public IRemoteStub<IUpdateNotify> {
