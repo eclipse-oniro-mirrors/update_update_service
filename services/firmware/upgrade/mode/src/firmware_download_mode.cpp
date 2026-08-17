@@ -58,17 +58,17 @@ FirmwareStep FirmwareDownloadMode::GetStepAfterInit()
 
     FIRMWARE_LOGI("GetStepAfterInit status %{public}d", static_cast<int32_t>(tasks_.status));
     UpgradeStatus taskStatus = tasks_.status;
-    if (taskStatus != UpgradeStatus::CHECK_VERSION_SUCCESS &&
-        taskStatus != UpgradeStatus::DOWNLOAD_FAIL &&
-        taskStatus != UpgradeStatus::DOWNLOAD_PAUSE) {
-        businessError_.Build(CallResult::FAIL, "status error!");
-        return FirmwareStep::COMPLETE;
-    }
-
     if (taskStatus == UpgradeStatus::DOWNLOADING) {
         FIRMWARE_LOGI("GetStepAfterInit system busy");
         businessError_.Build(CallResult::FAIL, "system busy!");
         businessError_.AddErrorMessage(CAST_INT(DUPDATE_ERR_SYSTEM_BUSY_ON_DOWNLOAD), "busy on Downloading!");
+        return FirmwareStep::COMPLETE;
+    }
+
+    if (taskStatus != UpgradeStatus::CHECK_VERSION_SUCCESS &&
+        taskStatus != UpgradeStatus::DOWNLOAD_FAIL &&
+        taskStatus != UpgradeStatus::DOWNLOAD_PAUSE) {
+        businessError_.Build(CallResult::FAIL, "status error!");
         return FirmwareStep::COMPLETE;
     }
 

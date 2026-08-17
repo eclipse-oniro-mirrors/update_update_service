@@ -16,6 +16,9 @@
 #ifndef FIRMWARE_SYS_INSTALLER_INSTALL_H
 #define FIRMWARE_SYS_INSTALLER_INSTALL_H
 
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <string>
 
 #include "firmware_component.h"
@@ -37,9 +40,14 @@ private:
     int32_t DoSysInstall(const FirmwareComponent &firmwareComponent);
     void InitInstallProgress();
     int32_t WaitInstallResult(const std::string &versionId);
+    int32_t InitSysInstaller(const FirmwareComponent &firmwareComponent);
+    int32_t SetupInstallCallback(FirmwareComponent firmwareComponent);
 
 private:
     Progress sysInstallProgress_;
+    std::mutex installMutex_;
+    std::condition_variable installCond_;
+    std::atomic<bool> resultReady_ { false };
 };
 } // namespace UpdateService
 } // namespace OHOS

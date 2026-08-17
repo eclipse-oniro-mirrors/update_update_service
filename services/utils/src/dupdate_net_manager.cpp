@@ -25,7 +25,7 @@ namespace OHOS {
 namespace UpdateService {
 NetManager::NetManager()
 {
-    observer_ = new NetObserver();
+    observer_ = std::make_shared<NetObserver>();
 }
 
 NetManager::~NetManager() {}

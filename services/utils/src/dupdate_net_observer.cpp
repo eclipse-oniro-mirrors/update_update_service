@@ -37,7 +37,13 @@ void NetObserver::SetCallback(const std::weak_ptr<INetObserverCallback> &callbac
 void NetObserver::StartObserver()
 {
     ENGINE_LOGI("StartObserver");
-    auto observerExecFunc = [this]() {
+    auto weakSelf = std::weak_ptr<NetObserver>(shared_from_this());
+    auto observerExecFunc = [weakSelf]() {
+        auto sharedSelf = weakSelf.lock();
+        if (!sharedSelf) {
+            ENGINE_LOGE("NetObserver already destroyed, abandon register");
+            return;
+        }
         NetSpecifier netSpecifier;
         NetAllCapabilities netAllCapabilities;
         netAllCapabilities.netCaps_.insert(NetManagerStandard::NetCap::NET_CAPABILITY_INTERNET);
@@ -48,7 +54,12 @@ void NetObserver::StartObserver()
         int32_t retryCount = 0;
         int32_t ret = NetConnResultCode::NET_CONN_SUCCESS;
         do {
-            ret = NetConnClient::GetInstance().RegisterNetConnCallback(specifier, this, 0);
+            sharedSelf = weakSelf.lock();
+            if (!sharedSelf) {
+                ENGINE_LOGE("NetObserver destroyed during retry");
+                return;
+            }
+            ret = NetConnClient::GetInstance().RegisterNetConnCallback(specifier, sharedSelf.get(), 0);
             if (ret == NetConnResultCode::NET_CONN_SUCCESS) {
                 ENGINE_LOGI("StartObserver register success");
                 return;

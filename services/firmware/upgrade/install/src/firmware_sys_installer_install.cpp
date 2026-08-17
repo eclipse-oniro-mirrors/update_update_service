@@ -58,39 +58,38 @@ bool SysInstallerInstall::PerformInstall(const std::vector<FirmwareComponent> &c
     return successCount == static_cast<uint32_t>(componentList.size());
 }
 
-int32_t SysInstallerInstall::DoSysInstall(const FirmwareComponent &firmwareComponent)
+int32_t SysInstallerInstall::InitSysInstaller(const FirmwareComponent &firmwareComponent)
 {
-    FIRMWARE_LOGI("DoSysInstall, status=%{public}d", firmwareComponent.status);
-    FirmwareComponent sysComponent = firmwareComponent;
-    InitInstallProgress();
-    int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SysInstallerInit(sysComponent.versionId);
+    int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SysInstallerInit(firmwareComponent.versionId);
     if (ret != OHOS_SUCCESS) {
         FIRMWARE_LOGE("sys installer init failed");
         errMsg_.errorMessage = "sys installer init failed";
         errMsg_.errorCode = DUPDATE_ERR_IPC_ERROR;
         return OHOS_FAILURE;
     }
+    return OHOS_SUCCESS;
+}
 
-    int32_t updateStatus = SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateStatus(sysComponent.versionId);
-    if (updateStatus != CAST_INT(SysInstaller::UpdateStatus::UPDATE_STATE_INIT)) {
-        FIRMWARE_LOGE("StartUnpack status: %{public}d , system busy", updateStatus);
-        errMsg_.errorMessage = "sys installer is busy";
-        errMsg_.errorCode = ret;
-        return OHOS_FAILURE;
-    }
+int32_t SysInstallerInstall::SetupInstallCallback(FirmwareComponent firmwareComponent)
+{
+    SysInstallerExecutorCallback callback { [this, firmwareComponent](const InstallProgress &installProgress) mutable {
+        {
+            std::lock_guard<std::mutex> lock(installMutex_);
+            sysInstallProgress_ = installProgress.progress;
+            errMsg_ = installProgress.errMsg;
+            resultReady_.store(true);
+        }
 
-    SysInstallerExecutorCallback callback { [&](const InstallProgress &installProgress) {
-        sysInstallProgress_ = installProgress.progress;
-        errMsg_ = installProgress.errMsg;
-        sysComponent.status = installProgress.progress.status;
-        sysComponent.progress = installProgress.progress.percent;
+        installCond_.notify_one();
+        firmwareComponent.status = installProgress.progress.status;
+        firmwareComponent.progress = installProgress.progress.percent;
         FIRMWARE_LOGI("SysInstallerExecutorCallback status=%{public}d , progress=%{public}d",
-            sysComponent.status, sysComponent.progress);
+            firmwareComponent.status, firmwareComponent.progress);
         if (onInstallCallback_.onFirmwareProgress == nullptr) {
             FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
             return;
         }
-        onInstallCallback_.onFirmwareProgress(sysComponent);
+        onInstallCallback_.onFirmwareProgress(firmwareComponent);
     } };
     sptr<SysInstaller::ISysInstallerCallbackFunc> cb = new SysInstallerCallback(callback);
     if (cb == nullptr) {
@@ -100,11 +99,35 @@ int32_t SysInstallerInstall::DoSysInstall(const FirmwareComponent &firmwareCompo
         return OHOS_FAILURE;
     }
 
-    ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SetUpdateCallback(sysComponent.versionId, cb);
+    int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SetUpdateCallback(firmwareComponent.versionId, cb);
     if (ret != OHOS_SUCCESS) {
         FIRMWARE_LOGE("set sys installer callback failed");
         errMsg_.errorMessage = "set sys installer callback failed";
         errMsg_.errorCode = ret;
+        return OHOS_FAILURE;
+    }
+    return OHOS_SUCCESS;
+}
+
+int32_t SysInstallerInstall::DoSysInstall(const FirmwareComponent &firmwareComponent)
+{
+    FIRMWARE_LOGI("DoSysInstall, status=%{public}d", firmwareComponent.status);
+    FirmwareComponent sysComponent = firmwareComponent;
+    InitInstallProgress();
+
+    if (InitSysInstaller(sysComponent) != OHOS_SUCCESS) {
+        return OHOS_FAILURE;
+    }
+
+    int32_t updateStatus = SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateStatus(sysComponent.versionId);
+    if (updateStatus != CAST_INT(SysInstaller::UpdateStatus::UPDATE_STATE_INIT)) {
+        FIRMWARE_LOGE("StartUnpack status: %{public}d , system busy", updateStatus);
+        errMsg_.errorMessage = "sys installer is busy";
+        errMsg_.errorCode = DUPDATE_ERR_SYSTEM_BUSY_ON_INSTALL;
+        return OHOS_FAILURE;
+    }
+
+    if (SetupInstallCallback(sysComponent) != OHOS_SUCCESS) {
         return OHOS_FAILURE;
     }
 
@@ -133,32 +156,40 @@ void SysInstallerInstall::InitInstallProgress()
     sysInstallProgress_.endReason = "";
     errMsg_.errorCode = 0;
     errMsg_.errorMessage = "";
+    resultReady_.store(false);
 }
 
 int32_t SysInstallerInstall::WaitInstallResult(const std::string &versionId)
 {
-    uint32_t timeout = 0;
+    std::unique_lock<std::mutex> lock(installMutex_);
+    int32_t ret = OHOS_SUCCESS;
     uint32_t configTime = DelayedSingleton<ConfigParse>::GetInstance()->GetAbInstallerTimeout();
     FIRMWARE_LOGI("sysinstaller wait result, max wait time=%{public}u", configTime);
-    while (timeout <= configTime) {
-        if (sysInstallProgress_.status == UpgradeStatus::INSTALL_FAIL) {
-            FIRMWARE_LOGE("WaitInstallResult sysinstaller fail");
-            SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateResult(versionId,
-                SysInstaller::TaskTypeConst::TASK_TYPE_AB_UPDATE, SysInstaller::ResultTypeConst::RESULT_TYPE_INSTALL);
-            return OHOS_FAILURE;
-        }
+
+    if (!installCond_.wait_for(lock, std::chrono::seconds(configTime), [this] {
+            return resultReady_.load() && ((sysInstallProgress_.status == UpgradeStatus::INSTALL_SUCCESS &&
+                sysInstallProgress_.percent == Firmware::ONE_HUNDRED) ||
+                (sysInstallProgress_.status == UpgradeStatus::INSTALL_FAIL));
+        })) {
+        FIRMWARE_LOGI("WaitInstallResult time out, sysInstallProgress_.status = %{public}d",
+            CAST_INT(sysInstallProgress_.status));
+        ret = OHOS_FAILURE;
+    } else {
         if (sysInstallProgress_.status == UpgradeStatus::INSTALL_SUCCESS &&
             sysInstallProgress_.percent == Firmware::ONE_HUNDRED) {
+            FIRMWARE_LOGI("WaitInstallResult INSTALL_SUCCESS");
             SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateResult(versionId,
                 SysInstaller::TaskTypeConst::TASK_TYPE_AB_UPDATE, SysInstaller::ResultTypeConst::RESULT_TYPE_INSTALL);
-            return OHOS_SUCCESS;
+            ret =  OHOS_SUCCESS;
+        } else {
+            FIRMWARE_LOGE("WaitInstallResult fail, sysInstallProgress_.status=%{public}d",
+                CAST_INT(sysInstallProgress_.status));
+            SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateResult(versionId,
+                SysInstaller::TaskTypeConst::TASK_TYPE_AB_UPDATE, SysInstaller::ResultTypeConst::RESULT_TYPE_INSTALL);
+            ret = OHOS_FAILURE;
         }
-        timeout++;
-        sleep(SLEEP_INSTALL);
     }
-    FIRMWARE_LOGI("WaitInstallResult time out, sysInstallProgress_.status=%{public}d",
-        CAST_INT(sysInstallProgress_.status));
-    return OHOS_FAILURE;
+    return ret;
 }
 } // namespace UpdateService
 } // namespace OHOS

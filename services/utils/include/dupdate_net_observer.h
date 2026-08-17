@@ -24,7 +24,8 @@
 
 namespace OHOS {
 namespace UpdateService {
-class NetObserver final : public DupdateINetObserver, public NetManagerStandard::NetConnCallbackStub {
+class NetObserver final : public DupdateINetObserver, public NetManagerStandard::NetConnCallbackStub,
+    public std::enable_shared_from_this<NetObserver> {
 public:
     void SetCallback(const std::weak_ptr<INetObserverCallback> &callback) final;
     void StartObserver() final;

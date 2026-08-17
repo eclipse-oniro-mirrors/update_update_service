@@ -32,7 +32,15 @@ namespace UpdateService {
 void FirmwareApplyExecutor::Execute()
 {
     FIRMWARE_LOGI("FirmwareApplyExecutor::Execute");
-    std::thread installThread([this] { this->DoInstall(); });
+    std::weak_ptr<FirmwareApplyExecutor> weakPtr = shared_from_this();
+    std::thread installThread([weakPtr] {
+        auto lockedSelf = weakPtr.lock();
+        if (lockedSelf == nullptr) {
+            FIRMWARE_LOGE("FirmwareApplyExecutor: object already destroyed");
+            return;
+        }
+        lockedSelf->DoInstall();
+    });
     installThread.detach();
 }
 

@@ -16,6 +16,8 @@
 #ifndef FIRMWARE_APPLY_EXECUTOR_H
 #define FIRMWARE_APPLY_EXECUTOR_H
 
+#include <memory>
+
 #include "firmware_component.h"
 #include "firmware_common.h"
 #include "firmware_iexecutor.h"
@@ -25,7 +27,8 @@
 
 namespace OHOS {
 namespace UpdateService {
-class FirmwareApplyExecutor : public FirmwareIExecutor {
+class FirmwareApplyExecutor : public FirmwareIExecutor,
+    public std::enable_shared_from_this<FirmwareApplyExecutor> {
 public:
     FirmwareApplyExecutor(FirmwareApplyCallback firmwareApplyCallback)
         : firmwareApplyCallback_(firmwareApplyCallback) {}

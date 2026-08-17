@@ -15,6 +15,7 @@
 
 #include "update_service_local_updater.h"
 
+#include "file_utils.h"
 #include "package/package.h"
 #include "updaterkits/updaterkits.h"
 
@@ -30,6 +31,20 @@ int32_t UpdateServiceLocalUpdater::ApplyNewVersion(const UpgradeInfo &info, cons
 #ifndef UPDATER_UT
     SYS_EVENT_SYSTEM_UPGRADE(0, UpdateSystemEvent::UPGRADE_START);
     businessError.errorNum = CallResult::SUCCESS;
+    std::string miscFileName = FileUtils::GetFileRealPath(miscFile);
+    if (miscFileName.empty()) {
+        ENGINE_LOGE("miscFile is error");
+        return INT_CALL_FAIL;
+    }
+
+    for (const std::string &packageName : packageNames) {
+        std::string packageFileName = FileUtils::GetFileRealPath(packageName);
+        if (packageFileName.empty()) {
+            ENGINE_LOGE("packageName is error");
+            return INT_CALL_FAIL;
+        }
+    }
+
     int32_t ret = RebootAndInstallSdcardPackage(miscFile, packageNames) ? INT_CALL_SUCCESS : INT_CALL_FAIL;
     ENGINE_LOGI("ApplyNewVersion result : %{public}d", ret);
     SYS_EVENT_SYSTEM_UPGRADE(

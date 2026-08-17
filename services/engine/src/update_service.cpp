@@ -388,7 +388,7 @@ int32_t UpdateService::ApplyNewVersion(const UpgradeInfo &info, const std::strin
 {
     sptr<UpdateServiceLocalUpdater> localUpdater = sptr<UpdateServiceLocalUpdater>::MakeSptr();
     if (localUpdater == nullptr) {
-        ENGINE_LOGI("FactoryReset localUpdater null");
+        ENGINE_LOGI("ApplyNewVersion localUpdater null");
         return INT_CALL_FAIL;
     }
     return localUpdater->ApplyNewVersion(info, miscFile, packageNames, businessError);
@@ -399,7 +399,7 @@ int32_t UpdateService::VerifyUpgradePackage(const std::string &packagePath, cons
 {
     sptr<UpdateServiceLocalUpdater> localUpdater = sptr<UpdateServiceLocalUpdater>::MakeSptr();
     if (localUpdater == nullptr) {
-        ENGINE_LOGI("FactoryReset localUpdater null");
+        ENGINE_LOGI("VerifyUpgradePackage localUpdater null");
         return INT_CALL_FAIL;
     }
     return localUpdater->VerifyUpgradePackage(packagePath, keyPath, businessError);
@@ -504,9 +504,6 @@ void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
     ENGINE_LOGI("UpdaterService oh OnStart, startReason name %{public}s, id %{public}d, value %{public}s",
         startReason.GetName().c_str(), CAST_INT(startReason.GetId()), startReason.GetValue().c_str());
     updateService_ = this;
-    if (updateService_ == nullptr) {
-        ENGINE_LOGE("updateService_ null");
-    }
 
     DelayedSingleton<ConfigParse>::GetInstance()->LoadConfigInfo(); // 启动读取配置信息
     std::string libPath = DelayedSingleton<ConfigParse>::GetInstance()->GetModuleLibPath();

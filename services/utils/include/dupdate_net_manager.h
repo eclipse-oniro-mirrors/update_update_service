@@ -53,7 +53,7 @@ private:
     bool IsBaseNetType(NetType netType);
 
 #ifdef NETMANAGER_BASE_ENABLE
-    sptr<NetObserver> observer_ = nullptr;
+    std::shared_ptr<NetObserver> observer_ = nullptr;
 #endif
     std::mutex netChangeMutex_;
     NetType netType_ = NetType::NO_NET;

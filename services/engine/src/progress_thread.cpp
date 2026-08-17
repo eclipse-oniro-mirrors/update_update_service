@@ -91,7 +91,8 @@ void ProgressThread::ExecuteThreadFunc()
 
 int32_t DownloadThread::StartDownload(const std::string &fileName, const std::string &url)
 {
-    ENGINE_LOGI("StartDownload downloadFileName_ %s, serverUrl_ = %s", downloadFileName_.c_str(), serverUrl_.c_str());
+    ENGINE_LOGI("StartDownload downloadFileName_ %{private}s, serverUrl_ = %{private}s", downloadFileName_.c_str(),
+        serverUrl_.c_str());
     downloadFileName_ = fileName;
     serverUrl_ = url;
     exitDownload_ = false;
@@ -181,7 +182,7 @@ int32_t DownloadThread::DownloadCallback(uint32_t percent, UpgradeStatus status,
         // 避免回调过于频繁
         return 0;
     }
-    ENGINE_LOGI("DownloadCallback percent %d, status %d, exitDownload_ %d, error %s, downloadFileName_ %s",
+    ENGINE_LOGI("DownloadCallback percent %d, status %d, exitDownload_ %d, error %s, downloadFileName_ %{private}s",
         percent, CAST_INT(status), exitDownload_ ? 1 : 0,  error.c_str(), downloadFileName_.c_str());
     if (status == UpgradeStatus::DOWNLOAD_FAIL) {
         if (access(downloadFileName_.c_str(), 0) == 0) {

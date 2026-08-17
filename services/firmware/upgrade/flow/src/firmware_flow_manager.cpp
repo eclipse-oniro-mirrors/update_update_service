@@ -120,6 +120,10 @@ void FirmwareFlowManager::OnInstallCallback(const InstallCallbackInfo &installCa
 void FirmwareFlowManager::OnApplyCallback(bool isSuccess)
 {
     FIRMWARE_LOGI("ParamFlowManager::apply %{public}s", isSuccess ? "success" : "fail");
+    if (executeMode_ == nullptr) {
+        FIRMWARE_LOGE("FirmwareFlowManager executeMode is null");
+        return;
+    }
     executeMode_->SetApplyResult(isSuccess);
     Execute();
 }

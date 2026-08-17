@@ -136,6 +136,10 @@ FirmwareStep FirmwareInstallApplyMode::GetStepAfterInstall()
         FirmwareUpdateHelper::ClearFirmwareInfo();
     }
 
+    if (installStepDataProcessor_.HasInstallSuccess() && upgradeOptions_.order == Order::INSTALL_AND_APPLY) {
+        return FirmwareStep::APPLY_STEP;
+    }
+
     return FirmwareStep::COMPLETE;
 }
 

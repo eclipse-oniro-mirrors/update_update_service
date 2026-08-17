@@ -71,12 +71,20 @@ bool UpdateNotify::ConnectToAppService(const std::string &eventInfo, const std::
         return false;
     }
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddItemToObject(root, "EventInfo", cJSON_Parse(eventInfo.c_str()));
-    cJSON_AddItemToObject(root, "SubscribeInfo", cJSON_Parse(subscribeInfo.c_str()));
+    if (root == nullptr) {
+        ENGINE_LOGE("ConnectToAppService create cJSON root failed");
+        return false;
+    }
+
+    cJSON *eventInfoObj = cJSON_Parse(eventInfo.c_str());
+    cJSON_AddItemToObject(root, "EventInfo", eventInfoObj ? eventInfoObj : cJSON_CreateNull());
+    cJSON *subscribeInfoObj = cJSON_Parse(subscribeInfo.c_str());
+    cJSON_AddItemToObject(root, "SubscribeInfo", subscribeInfoObj ? subscribeInfoObj : cJSON_CreateNull());
 
     char *data = cJSON_PrintUnformatted(root);
     if (data == nullptr) {
         cJSON_Delete(root);
+        ENGINE_LOGE("ConnectToAppService cJSON_PrintUnformatted failed");
         return false;
     }
     std::string message = std::string(data);
@@ -92,43 +100,52 @@ bool UpdateNotify::HandleMessage(const std::string &message)
     AAFwk::Want want;
     want.SetElementName(bundleName, abilityName);
     want.SetParam("Timeout", UPDATE_APP_TIMEOUT);
-    auto connect = sptr<NotifyConnection>::MakeSptr(instance_);
-    int ret = ConnectAbility(want, connect);
-    std::unique_lock<std::mutex> uniqueLock(connectMutex_);
-    conditionVal_.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT));
-    if (ret != OHOS::ERR_OK || remoteObject_ == nullptr) {
-        ENGINE_LOGE("HandleMessage, can not connect to ouc");
+
+    auto notifyContext = sptr<NotifyConnectContext>::MakeSptr();
+    auto connect = sptr<NotifyConnection>::MakeSptr(notifyContext);
+
+    ErrCode ret = ConnectAbility(want, connect);
+    if (ret != OHOS::ERR_OK) {
+        ENGINE_LOGE("HandleMessage connect failed immediately");
+        DisconnectAbility(connect);
         return false;
     }
+
+    std::unique_lock<std::mutex> uniqueLock(notifyContext->mtx);
+    bool waitOk = notifyContext->cv.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
+        [ctx = notifyContext]() { return ctx->remote != nullptr; });
+    if (!waitOk || notifyContext->remote == nullptr) {
+        uniqueLock.unlock();
+        ENGINE_LOGE("HandleMessage, can not connect to ouc (timeout or remote nullptr)");
+        DisconnectAbility(connect);
+        return false;
+    }
+    sptr<IRemoteObject> remote = notifyContext->remote;
+    uniqueLock.unlock();
 
     MessageParcel data;
     if (!data.WriteString16(Str8ToStr16(message))) {
         ENGINE_LOGE("HandleMessage, write message failed");
+        DisconnectAbility(connect);
         return false;
     }
 
     MessageParcel reply;
     MessageOption option(MessageOption::TF_SYNC);
-    int32_t result = remoteObject_->SendRequest(CAST_INT(UpdateAppCode::UPDATE_APP), data, reply, option);
+
+    int32_t result = remote->SendRequest(CAST_INT(UpdateAppCode::UPDATE_APP), data, reply, option);
+    DisconnectAbility(connect);
     if (result != 0) {
         ENGINE_LOGE("HandleMessage SendRequest, error result %{public}d", result);
-        DisconnectAbility(connect);
         return false;
     }
+
     return true;
 }
 
-void UpdateNotify::HandleAbilityConnect(const sptr<IRemoteObject> &remoteObject)
-{
-    std::lock_guard<std::mutex> lock(connectMutex_);
-    remoteObject_ = remoteObject;
-    conditionVal_.notify_one();
-}
-
-NotifyConnection::NotifyConnection(const sptr<UpdateNotify> &instance)
+NotifyConnection::NotifyConnection(sptr<NotifyConnectContext> ctx) : ctx_(ctx)
 {
     ENGINE_LOGD("NotifyConnection constructor");
-    instance_ = instance;
 }
 
 void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &element,
@@ -139,20 +156,24 @@ void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &eleme
         ENGINE_LOGE("ability connect failed, error code: %{public}d", resultCode);
         return;
     }
-    ENGINE_LOGI("ability connect success, ability name %{public}s", element.GetAbilityName().c_str());
-    if (remoteObject == nullptr) {
-        ENGINE_LOGE("get remoteObject failed");
+
+    if (remoteObject == nullptr || ctx_ == nullptr) {
+        ENGINE_LOGE("remoteObject or ctx is nullptr");
         return;
     }
-    if (instance_ == nullptr) {
-        return;
-    }
-    instance_->HandleAbilityConnect(remoteObject);
+
+    std::lock_guard<std::mutex> lock(ctx_->mtx);
+    ctx_->remote = remoteObject;
+    ctx_->cv.notify_one();
 }
 
 void NotifyConnection::OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode)
 {
     ENGINE_LOGI("OnAbilityDisconnectDone successfully. result %{public}d", resultCode);
+    if (ctx_ != nullptr) {
+        std::lock_guard<std::mutex> lock(ctx_->mtx);
+        ctx_->remote = nullptr;
+    }
 }
 } // namespace UpdateService
 } // namespace OHOS

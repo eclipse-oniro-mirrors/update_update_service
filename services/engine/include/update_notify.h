@@ -31,6 +31,12 @@
 
 namespace OHOS {
 namespace UpdateService {
+struct NotifyConnectContext : public RefBase {
+    std::mutex mtx;
+    std::condition_variable cv;
+    sptr<IRemoteObject> remote = nullptr;
+};
+
 class UpdateNotify : public IRemoteStub<IUpdateNotify> {
 public:
     DISALLOW_COPY_AND_MOVE(UpdateNotify);
@@ -39,7 +45,6 @@ public:
     ~UpdateNotify();
     static sptr<UpdateNotify> GetInstance();
     bool ConnectToAppService(const std::string &eventInfo, const std::string &subscribeInfo);
-    void HandleAbilityConnect(const sptr<IRemoteObject> &remoteObject);
 
 private:
     bool HandleMessage(const std::string &message);
@@ -49,9 +54,6 @@ private:
 private:
     static std::mutex instanceLock_;
     static sptr<UpdateNotify> instance_;
-    sptr<IRemoteObject> remoteObject_ = nullptr;
-    std::mutex connectMutex_;
-    std::condition_variable  conditionVal_;
 
     enum class UpdateAppCode {
         UNKNOWN = 0,
@@ -61,14 +63,15 @@ private:
 
 class NotifyConnection : public AAFwk::AbilityConnectionStub {
 public:
-    explicit NotifyConnection(const sptr<UpdateNotify> &instance);
+    explicit NotifyConnection(sptr<NotifyConnectContext> ctx);
     ~NotifyConnection() = default;
+
     void OnAbilityConnectDone(const AppExecFwk::ElementName &element, const sptr<IRemoteObject> &remoteObject,
         int32_t resultCode) override;
     void OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode) override;
 
 private:
-    sptr<UpdateNotify> instance_ = nullptr;
+    sptr<NotifyConnectContext> ctx_;
 };
 } // namespace UpdateService
 } // namespace OHOS
