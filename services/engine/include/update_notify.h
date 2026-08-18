@@ -42,7 +42,7 @@ struct NotifyConnectContext : public RefBase {
     std::mutex mtx;
     std::condition_variable cv;
     sptr<IRemoteObject> remote = nullptr;
-    ConnState state = ConnectState::IDLE;
+    ConnectState state = ConnectState::IDLE;
 };
 
 class UpdateNotify : public IRemoteStub<IUpdateNotify> {
