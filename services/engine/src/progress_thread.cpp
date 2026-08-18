@@ -182,8 +182,8 @@ int32_t DownloadThread::DownloadCallback(uint32_t percent, UpgradeStatus status,
         // 避免回调过于频繁
         return 0;
     }
-    ENGINE_LOGI("DownloadCallback percent %{public}d, status %{public}d, exitDownload_ %{public}d, error %{public}s,
-        downloadFileName_ %{private}s", percent, CAST_INT(status), exitDownload_ ? 1 : 0,  error.c_str(),
+    ENGINE_LOGI("DownloadCallback percent %{public}u, status %{public}d, exitDownload_ %{public}d, error %{public}s,"
+        "downloadFileName_ %{private}s", percent, CAST_INT(status), exitDownload_ ? 1 : 0,  error.c_str(),
         downloadFileName_.c_str());
     if (status == UpgradeStatus::DOWNLOAD_FAIL) {
         if (access(downloadFileName_.c_str(), 0) == 0) {
