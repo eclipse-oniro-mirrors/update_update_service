@@ -116,6 +116,7 @@ int32_t SysInstallerInstall::DoSysInstall(const FirmwareComponent &firmwareCompo
     InitInstallProgress();
 
     if (InitSysInstaller(sysComponent) != OHOS_SUCCESS) {
+        FIRMWARE_LOGE("InitSysInstaller error");
         return OHOS_FAILURE;
     }
 
@@ -128,10 +129,12 @@ int32_t SysInstallerInstall::DoSysInstall(const FirmwareComponent &firmwareCompo
     }
 
     if (SetupInstallCallback(sysComponent) != OHOS_SUCCESS) {
+        FIRMWARE_LOGE("install callback setup error");
         return OHOS_FAILURE;
     }
 
     if (StartUpdatePackageZip(sysComponent.versionId, sysComponent.spath) != OHOS_SUCCESS) {
+        FIRMWARE_LOGE("startUpdatePackageZip error");
         return OHOS_FAILURE;
     }
     return WaitInstallResult(sysComponent.versionId);

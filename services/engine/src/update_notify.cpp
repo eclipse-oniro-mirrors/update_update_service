@@ -113,7 +113,7 @@ bool UpdateNotify::HandleMessage(const std::string &message)
     }
 
     std::unique_lock<std::mutex> uniqueLock(notifyContext->mtx);
-    bool waitOk = notifyContext->cv.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
+    bool waitOk = notifyContext->conditionVar.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
         [ctx = notifyContext]() { return ctx->state == ConnectState::SUCCESS || ctx->state == ConnectState::FAILED; });
     if (!waitOk || notifyContext->state != ConnectState::SUCCESS || notifyContext->remote == nullptr) {
         uniqueLock.unlock();
@@ -144,7 +144,7 @@ bool UpdateNotify::HandleMessage(const std::string &message)
     return true;
 }
 
-NotifyConnection::NotifyConnection(sptr<NotifyConnectContext> ctx) : ctx_(ctx)
+NotifyConnection::NotifyConnection(sptr<NotifyConnectContext> connectContext) : connectContext_(connectContext)
 {
     ENGINE_LOGD("NotifyConnection constructor");
 }
@@ -153,39 +153,39 @@ void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &eleme
     const sptr<IRemoteObject> &remoteObject, int32_t resultCode)
 {
     ENGINE_LOGI("OnAbilityConnectDone successfully. result %{public}d", resultCode);
-    if (ctx_ == nullptr) {
-        ENGINE_LOGE("ctx is nullptr");
+    if (connectContext_ == nullptr) {
+        ENGINE_LOGE("connectContext_ is nullptr");
         return;
     }
-    std::lock_guard<std::mutex> lock(ctx_->mtx);
-    if (ctx_->state != ConnectState::WAITING) {
+    std::lock_guard<std::mutex> lock(connectContext_->connectMutex);
+    if (connectContext_->state != ConnectState::WAITING) {
         ENGINE_LOGE("OnAbilityConnectDone skip, task finished already");
         return;
     }
     if (resultCode != ERR_OK) {
         ENGINE_LOGE("ability connect failed, error code: %{public}d", resultCode);
-        ctx_->state = ConnectState::FAILED;
-        ctx_->cv.notify_one();
+        connectContext_->state = ConnectState::FAILED;
+        connectContext_->conditionVar.notify_one();
         return;
     }
 
     if (remoteObject == nullptr) {
-        ENGINE_LOGE("remoteObject or ctx is nullptr");
-        ctx_->state = ConnectState::FAILED;
-        ctx_->cv.notify_one();
+        ENGINE_LOGE("remoteObject is nullptr");
+        connectContext_->state = ConnectState::FAILED;
+        connectContext_->conditionVar.notify_one();
         return;
     }
-    ctx_->remote = remoteObject;
-    ctx_->state = ConnectState::SUCCESS;
-    ctx_->cv.notify_one();
+    connectContext_->remote = remoteObject;
+    connectContext_->state = ConnectState::SUCCESS;
+    connectContext_->conditionVar.notify_one();
 }
 
 void NotifyConnection::OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode)
 {
     ENGINE_LOGI("OnAbilityDisconnectDone successfully. result %{public}d", resultCode);
-    if (ctx_ != nullptr) {
-        std::lock_guard<std::mutex> lock(ctx_->mtx);
-        ctx_->remote = nullptr;
+    if (connectContext_ != nullptr) {
+        std::lock_guard<std::mutex> lock(connectContext_->connectMutex);
+        connectContext_->remote = nullptr;
     }
 }
 } // namespace UpdateService

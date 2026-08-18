@@ -39,8 +39,8 @@ enum class ConnectState {
 };
 
 struct NotifyConnectContext : public RefBase {
-    std::mutex mtx;
-    std::condition_variable cv;
+    std::mutex connectMutex;
+    std::condition_variable conditionVar;
     sptr<IRemoteObject> remote = nullptr;
     ConnectState state = ConnectState::IDLE;
 };
@@ -71,7 +71,7 @@ private:
 
 class NotifyConnection : public AAFwk::AbilityConnectionStub {
 public:
-    explicit NotifyConnection(sptr<NotifyConnectContext> ctx);
+    explicit NotifyConnection(sptr<NotifyConnectContext> connectContext);
     ~NotifyConnection() = default;
 
     void OnAbilityConnectDone(const AppExecFwk::ElementName &element, const sptr<IRemoteObject> &remoteObject,
@@ -79,7 +79,7 @@ public:
     void OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode) override;
 
 private:
-    sptr<NotifyConnectContext> ctx_;
+    sptr<NotifyConnectContext> connectContext_;
 };
 } // namespace UpdateService
 } // namespace OHOS
