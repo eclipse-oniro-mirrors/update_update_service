@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,15 +15,14 @@
 
 #include "firmware_download_mode.h"
 
+#include "download_task_manager.h"
 #include "dupdate_errno.h"
 #include "dupdate_inet_observer.h"
 #include "dupdate_net_manager.h"
 #include "firmware_callback_utils.h"
 #include "firmware_common.h"
-#include "firmware_constant.h"
+#include "firmware_download_process.h"
 #include "firmware_log.h"
-#include "firmware_preferences_utils.h"
-#include "firmware_status_cache.h"
 #include "firmware_task_operator.h"
 #include "firmware_update_helper.h"
 #include "string_utils.h"
@@ -58,8 +57,7 @@ FirmwareStep FirmwareDownloadMode::GetStepAfterInit()
 
     FIRMWARE_LOGI("GetStepAfterInit status %{public}d", static_cast<int32_t>(tasks_.status));
     UpgradeStatus taskStatus = tasks_.status;
-    if (taskStatus != UpgradeStatus::CHECK_VERSION_SUCCESS &&
-        taskStatus != UpgradeStatus::DOWNLOAD_FAIL &&
+    if (taskStatus != UpgradeStatus::CHECK_VERSION_SUCCESS && taskStatus != UpgradeStatus::DOWNLOAD_FAIL &&
         taskStatus != UpgradeStatus::DOWNLOAD_PAUSE) {
         businessError_.Build(CallResult::FAIL, "status error!");
         return FirmwareStep::COMPLETE;
@@ -72,7 +70,7 @@ FirmwareStep FirmwareDownloadMode::GetStepAfterInit()
         return FirmwareStep::COMPLETE;
     }
 
-    if (!DelayedSingleton<NetManager>::GetInstance()->IsNetAvailable()) {
+    if (!DelayedSingleton<NetManager>::GetInstance()->IsNetAvailable(tasks_.downloadAllowNetwork)) {
         FIRMWARE_LOGI("GetStepAfterInit IsNeedBlockCheck no network, nettype is %{public}d",
             DelayedSingleton<NetManager>::GetInstance()->GetNetType());
         businessError_.Build(CallResult::FAIL, "download no network!");
@@ -105,65 +103,29 @@ FirmwareStep FirmwareDownloadMode::GetStepAfterDownload()
     if (!downloadDataProcessor_.GetDownloadProgress().endReason.empty()) {
         StringUtils::DecStringToNumber(downloadDataProcessor_.GetDownloadProgress().endReason, errorMessage.errorCode);
     }
+    FirmwareDownloadProcess downloadProcess;
     FirmwareStep nextStep = FirmwareStep::COMPLETE;
     switch (task.status) {
         case UpgradeStatus::DOWNLOAD_PAUSE:
-            DownloadPauseProcess(task, errorMessage);
+            downloadProcess.DownloadPauseProcess(task, errorMessage);
             nextStep = FirmwareStep::COMPLETE;
             break;
         case UpgradeStatus::DOWNLOAD_FAIL:
-            DownloadFailProcess(task, errorMessage);
+            downloadProcess.DownloadFailProcess(task, errorMessage);
             nextStep = FirmwareStep::COMPLETE;
             break;
         case UpgradeStatus::DOWNLOAD_CANCEL:
-            DownloadCancelProcess(task, errorMessage);
+            downloadProcess.DownloadCancelProcess(task, errorMessage);
             nextStep = FirmwareStep::COMPLETE;
             break;
         case UpgradeStatus::DOWNLOAD_SUCCESS:
-            DownloadSucessProcess(task, errorMessage);
+            downloadProcess.DownloadSuccessProcess(task, errorMessage);
             nextStep = FirmwareStep::COMPLETE;
             break;
         default:
             break;
     }
     return nextStep;
-}
-
-void FirmwareDownloadMode::DownloadPauseProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download pause");
-    DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(
-        task.taskId, EventId::EVENT_DOWNLOAD_PAUSE, UpgradeStatus::DOWNLOAD_PAUSE, errorMessage);
-}
-
-void FirmwareDownloadMode::DownloadFailProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download fail");
-    FirmwareUpdateHelper::ClearFirmwareInfo();
-}
-
-void FirmwareDownloadMode::DownloadCancelProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download cancel");
-    DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(
-        task.taskId, EventId::EVENT_DOWNLOAD_CANCEL, UpgradeStatus::DOWNLOAD_CANCEL, errorMessage);
-    FirmwareTaskOperator().UpdateProgressByTaskId(task.taskId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
-    std::vector<FirmwareComponent> firmwareComponentList;
-    FirmwareComponentOperator firmwareComponentOperator;
-    firmwareComponentOperator.QueryAll(firmwareComponentList);
-    for (const FirmwareComponent &component : firmwareComponentList) {
-        firmwareComponentOperator.UpdateProgressByUrl(
-            component.url, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
-    }
-    FirmwareTaskOperator().UpdateDownloadTaskIdByTaskId(task.taskId, "");
-    FirmwareFileUtils::DeleteDownloadFiles();
-}
-
-void FirmwareDownloadMode::DownloadSucessProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download success");
-    DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(
-        task.taskId, EventId::EVENT_UPGRADE_WAIT, UpgradeStatus::DOWNLOAD_SUCCESS);
 }
 
 void FirmwareDownloadMode::GetTask()
@@ -187,6 +149,16 @@ DownloadOptions FirmwareDownloadMode::GetDownloadOptions()
 void FirmwareDownloadMode::SetDownloadProgress(const Progress &progress)
 {
     downloadDataProcessor_.SetDownloadProgress(progress);
+}
+
+void FirmwareDownloadMode::SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo)
+{
+    downloadDataProcessor_.SetDownloadCallbackInfo(callbackInfo);
+}
+
+void FirmwareDownloadMode::SetDownloadEvent(const std::string &downloadTaskId, EventId eventId)
+{
+    downloadDataProcessor_.SetDownloadEvent(downloadTaskId, eventId);
 }
 } // namespace UpdateService
 } // namespace OHOS

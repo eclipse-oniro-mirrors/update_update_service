@@ -28,12 +28,14 @@
     "deps": {
       "components": [
         "ability_runtime",
+        "battery_manager",
         "bounds_checking_function",
         "bundle_framework",
         "c_utils",
         "cJSON",
         "curl",
         "eventhandler",
+        "graphic_2d",
         "hilog",
         "ipc",
         "safwk",
@@ -41,6 +43,7 @@
         "napi",
         "node",
         "access_token",
+        "audio_framework",
         "hisysevent",
         "init",
         "libxml2",
@@ -48,6 +51,7 @@
         "ability_base",
         "netmanager_base",
         "openssl",
+        "power_manager",
         "preferences",
         "sys_installer",
         "storage_service",
@@ -55,7 +59,14 @@
         "relational_store",
         "runtime_core",
         "jsoncpp",
-        "taihe_ffi_gen"
+        "taihe_ffi_gen",
+        "data_share",
+        "wifi",
+        "call_manager",
+        "core_service",
+        "cellular_data",
+        "telephony_enhanced",
+        "ffrt"
       ],
       "third_party": []
     },

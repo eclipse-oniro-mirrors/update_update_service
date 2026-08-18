@@ -37,26 +37,6 @@ FirmwareStep FirmwareDownloadMode::GetStepAfterDownload()
     return FirmwareStep::COMPLETE;
 }
 
-void FirmwareDownloadMode::DownloadPauseProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download pause");
-}
-
-void FirmwareDownloadMode::DownloadFailProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download fail");
-}
-
-void FirmwareDownloadMode::DownloadCancelProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download cancel");
-}
-
-void FirmwareDownloadMode::DownloadSucessProcess(const FirmwareTask &task, const ErrorMessage &errorMessage)
-{
-    FIRMWARE_LOGI("GetStepAfterDownload download success");
-}
-
 void FirmwareDownloadMode::GetTask()
 {
     FIRMWARE_LOGI("FirmwareDownloadMode::GetTask");

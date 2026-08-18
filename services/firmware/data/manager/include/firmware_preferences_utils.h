@@ -24,6 +24,15 @@ namespace OHOS {
 namespace UpdateService {
 class FirmwarePreferencesUtil : public PreferencesUtil, public DelayedSingleton<FirmwarePreferencesUtil> {
     DECLARE_DELAYED_SINGLETON(FirmwarePreferencesUtil);
+public:
+    int64_t GetAutoUpgradeTime(int64_t defaultVal = -1);
+    void SaveAutoUpgradeTime(int64_t time);
+
+    bool GetAutoDownloadSwitch();
+    void SaveAutoDownloadSwitch(bool value);
+
+    bool GetNightUpgradeSwitch();
+    void SaveNightUpgradeSwitch(bool value);
 
 protected:
     std::string GetPath() final;

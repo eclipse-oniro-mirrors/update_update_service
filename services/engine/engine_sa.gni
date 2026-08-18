@@ -13,9 +13,13 @@
 
 import("//base/update/updateservice/updateengine.gni")
 import("//build/ohos.gni")
+import("$updateengine_root_path/services/core/ability/bell/bell_utils.gni")
 import("$updateengine_root_path/services/core/ability/sqlite/sqlite.gni")
 import("$updateengine_root_path/services/firmware/firmware.gni")
 import("$updateengine_root_path/services/startup/startup.gni")
+import("$updateengine_root_path/services/core/ability/download/download.gni")
+import("$updateengine_root_path/services/core/ability/net/net_request.gni")
+import("$updateengine_root_path/services/core/ability/async_task/async_task_emitter.gni")
 
 declare_args() {
   ability_ability_base_enable = true
@@ -41,6 +45,8 @@ sa_sources = [
   "$updateengine_root_path/services/core/ability/status_cache/src/status_cache.cpp",
   "$updateengine_root_path/services/core/ability/utils/src/file_utils.cpp",
   "$updateengine_root_path/services/core/ability/utils/src/sha256_utils.cpp",
+  "$updateengine_root_path/services/core/ability/utils/src/response_header_parse.cpp",
+  "$updateengine_root_path/services/core/ability/utils/src/sha256_delay_strategy_utils.cpp",
   "$updateengine_root_path/services/core/ability/utils/src/time_utils_proxy.cpp",
   "$updateengine_root_path/services/engine/src/progress_thread.cpp",
   "$updateengine_root_path/services/engine/src/stream_progress_thread.cpp",
@@ -81,8 +87,12 @@ if (preference_native_preferences_enable) {
 }
 
 sa_sources += firmware_src
+sa_sources += bell_utils_src
 sa_sources += sqlite_src
 sa_sources += startup_src
+sa_sources += download_src
+sa_sources += net_request_src
+sa_sources += async_task_src
 
 sa_include_dirs = [
   "$updateengine_root_path/services/auto_update/include",
@@ -112,8 +122,12 @@ if (!relational_store_native_rdb_enable) {
 }
 
 sa_include_dirs += firmware_include
+sa_include_dirs += bell_utils_include
 sa_include_dirs += sqlite_include
 sa_include_dirs += startup_include
+sa_include_dirs += download_include
+sa_include_dirs += net_request_include
+sa_include_dirs += async_task_include
 sa_include_dirs +=
     [ "//base/update/updateservice/interfaces/innner_api/modulemgr/include" ]
 
@@ -124,6 +138,7 @@ sa_deps = [
 ]
 
 sa_deps += firmware_deps
+sa_deps += bell_utils_deps
 sa_deps += startup_deps
 
 sa_external_deps = [
@@ -175,9 +190,27 @@ if (preference_native_preferences_enable) {
   sa_external_deps += [ "preferences:native_preferences" ]
 }
 
+if (defined(global_parts_info.powermgr_battery_manager)) {
+  sa_external_deps += [ "battery_manager:batterysrv_client" ]
+}
+
+if (defined(global_parts_info.powermgr_power_manager)) {
+  sa_external_deps += [ "power_manager:powermgr_client" ]
+}
+
+if (defined(global_parts_info.telephony_call_manager)) {
+  sa_external_deps += [ "call_manager:tel_call_manager_api" ]
+}
+
+if (defined(global_parts_info.multimedia_audio_framework)) {
+  sa_external_deps += [ "audio_framework:audio_client" ]
+}
+
 sa_external_deps += firmware_external_deps
+sa_external_deps += bell_utils_external_deps
 sa_external_deps += sqlite_external_deps
 sa_external_deps += startup_external_deps
+sa_external_deps += async_task_external_deps
 
 sa_defines = [
   "DUAL_ADAPTER",

@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,6 +44,18 @@ bool FirmwareComponentOperator::UpdateUrlByVersionId(const std::string &versionI
 {
     NativeRdb::ValuesBucket values;
     values.PutString(COLUMN_COMPONENT_DOWNLOAD_URL, url);
+
+    OHOS::NativeRdb::RdbPredicates predicates(GetTableName());
+    predicates.EqualTo(COLUMN_COMPONENT_VERSION_ID, versionId);
+    return TableBaseOperator::Update(values, predicates);
+}
+
+bool FirmwareComponentOperator::UpdateProgressByVersionId(const std::string &versionId, UpgradeStatus status,
+    int32_t progress)
+{
+    NativeRdb::ValuesBucket values;
+    values.PutInt(COLUMN_COMPONENT_STATUS, CAST_INT(status));
+    values.PutInt(COLUMN_COMPONENT_PROGRESS, progress);
 
     OHOS::NativeRdb::RdbPredicates predicates(GetTableName());
     predicates.EqualTo(COLUMN_COMPONENT_VERSION_ID, versionId);

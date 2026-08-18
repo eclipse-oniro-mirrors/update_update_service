@@ -41,8 +41,10 @@ private:
         const std::vector<FirmwareComponent> &componentList, const CheckAndAuthInfo &checkAndAuthInfo);
 
     void OnDownloadCallback(const Progress &progress);
+    void OnDownloadCallback(const FirmwareDownloadCallbackInfo &downloadCallbackInfo);
     void OnInstallCallback(const InstallCallbackInfo &installCallbackInfo);
     void OnApplyCallback(bool isSuccess);
+    void OnDownloadEventCallback(const std::string downloadTaskId, const EventId &eventId);
 
 private:
     std::shared_ptr<FirmwareIExecuteMode> executeMode_ = nullptr;

@@ -13,14 +13,12 @@
 
 import("//base/update/updateservice/updateengine.gni")
 import("$updateengine_root_path/services/core/ability/sqlite/sqlite.gni")
+import("$updateengine_root_path/services/firmware/common/device_idle/device_idle.gni")
+import("$updateengine_root_path/services/firmware/common/battery_state/battery_state.gni")
 
 firmware_root_path = "$updateengine_root_path/services/firmware"
 
 ab_update_include = []
-
-download_include = [
-  "//base/update/updateservice/services/core/ability/download/data/include",
-]
 
 firmware_include = [
   "$firmware_root_path/alarm/include",
@@ -40,7 +38,8 @@ firmware_include = [
   "$firmware_root_path/utils/include",
 ]
 firmware_include += ab_update_include
-firmware_include += download_include
+firmware_include += device_idle_include
+firmware_include += battery_state_include
 
 ab_update_src = [
   "$firmware_root_path/upgrade/install/src/firmware_sys_installer_callback.cpp",
@@ -56,6 +55,9 @@ if (ability_ability_runtime_enable) {
 firmware_src = [
   "$firmware_root_path/callback/src/firmware_callback_utils.cpp",
   "$firmware_root_path/common/src/firmware_update_helper.cpp",
+  "$firmware_root_path/alarm/src/firmware_auto_upgrade_alarm_manager.cpp",
+  "$firmware_root_path/alarm/src/firmware_night_upgrade_alarm_manager.cpp",
+  "$firmware_root_path/alarm/src/night_upgrade_alarm_manager.cpp",
   "$firmware_root_path/data/manager/src/firmware_preferences_utils.cpp",
   "$firmware_root_path/upgrade/data_processor/src/firmware_download_data_processor.cpp",
   "$firmware_root_path/upgrade/data_processor/src/firmware_install_data_processor.cpp",
@@ -65,6 +67,7 @@ firmware_src = [
   "$firmware_root_path/upgrade/executor/src/firmware_install_executor.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_flow_manager.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_manager.cpp",
+  "$firmware_root_path/upgrade/flow/src/firmware_event_manager.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_install.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_updater_install.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_install_factory.cpp",
@@ -80,15 +83,19 @@ if (communication_netmanager_base_enable) {
     "$firmware_root_path/event/src/firmware_event_listener.cpp",
     "$firmware_root_path/upgrade/data_processor/src/firmware_check_data_processor.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_download_mode.cpp",
+    "$firmware_root_path/upgrade/mode/src/firmware_auto_upgrade_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_manual_check_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_install_apply_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_stream_install_apply_mode.cpp",
+    "$firmware_root_path/upgrade/mode/src/firmware_download_process.cpp",
   ]
 } else {
   firmware_src += [
     "$firmware_root_path/event/src/firmware_event_listener_empty.cpp",
     "$firmware_root_path/upgrade/data_processor/src/firmware_check_data_processor_empty.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_download_mode_empty.cpp",
+    "$firmware_root_path/upgrade/mode/src/firmware_download_process_empty.cpp",
+    "$firmware_root_path/upgrade/mode/src/firmware_auto_upgrade_mode_empty.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_manual_check_mode_empty.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_install_apply_mode_empty.cpp",
   ]
@@ -113,6 +120,8 @@ if (relational_store_native_rdb_enable) {
   ]
 }
 firmware_src += ab_update_src
+firmware_src += device_idle_src
+firmware_src += battery_state_src
 
 firmware_external_deps = [ "sys_installer:libsysinstaller_shared" ]
 
