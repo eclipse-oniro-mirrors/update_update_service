@@ -16,6 +16,7 @@
 #include "sha256_utils.h"
 
 #include <cstdlib>
+#include <thread>
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -60,6 +61,91 @@ bool Sha256Utils::CheckFileSha256String(const std::string &fileName, const std::
     return true;
 }
 
+Sha256VerifyResult Sha256Utils::GetFileSha256VerifyResult(const std::string& fileName, const std::string& sha256String,
+    const OnFileVerifyCallback& callback)
+{
+    if (!FileUtils::IsFileExist(fileName)) {
+        ENGINE_LOGE("check file sha256 failed, fileName = %{public}s is not exist", fileName.c_str());
+        return {
+            .sha256ErrCode = Sha256ErrCode::FILE_NOT_EXIST
+        };
+    }
+    char sha256Result[SHA256_STRING_LEN] = {0}; // sha256Result len is 65
+    if (!GetFileSha256Str(fileName, sha256Result, sizeof(sha256Result), callback)) {
+        ENGINE_LOGE("get file sha256 failed");
+        return {
+            .sha256ErrCode = Sha256ErrCode::OBTAIN_FILE_SHA256_FAIL,
+            .sha256Result = sha256Result
+        };
+    }
+    if (strcasecmp(sha256Result, sha256String.c_str()) != 0) {
+        ENGINE_LOGE("sha256 not same! expected=%{public}s, cal=%{public}s", sha256String.c_str(), sha256Result);
+        return {
+            .sha256ErrCode = Sha256ErrCode::SHA256_NOT_MATCH,
+            .sha256Result = sha256Result
+        };
+    }
+    return {
+        .sha256ErrCode = Sha256ErrCode::SUCCESS
+    };
+}
+
+bool Sha256Utils::GetDigestFromFile(const char* fileName, unsigned char digest[], const OnFileVerifyCallback& callback)
+{
+    char realPath[PATH_MAX] = {};
+    if (realpath(fileName, realPath) == NULL) {
+        return false;
+    }
+    std::ifstream file(realPath, std::ios::binary);
+    if (!file.is_open()) {
+        ENGINE_LOGI("%{private}s Unable to open file", realPath);
+        return false;
+    }
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    size_t MAX_BUFFER_LENGTH = 1024;
+    char *buffer = (char *)malloc(MAX_BUFFER_LENGTH);
+    if (buffer == nullptr) {
+        ENGINE_LOGI("failed to allocate memory");
+        file.close();
+        return false;
+    }
+
+    Sha256DelayParam delayParam;
+    auto delayStrategy = Sha256DelayStrategyMap_.find(sha256DelayScene_);
+    if (delayStrategy != Sha256DelayStrategyMap_.end()) {
+        delayParam = delayStrategy->second;
+    }
+    int64_t cycleCount = 0;
+    std::streamsize bytesRead = 0;
+    while (!file.eof()) {
+        file.read(buffer, MAX_BUFFER_LENGTH);
+        SHA256_Update(&ctx, buffer, file.gcount());
+        if (isNeedStop_) {
+            ENGINE_LOGI("get digest from file stop");
+            break;
+        }
+        cycleCount++;
+        if (delayParam.isNeedDelay && (cycleCount % delayParam.delayCycleCount == 0)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delayParam.sleepDurationPerTimes));
+        }
+        bytesRead += file.gcount();
+        if (callback != nullptr) {
+            callback((int64_t)bytesRead);
+        }
+    }
+    SHA256_Final(digest, &ctx);
+    file.close();
+    free(buffer);
+    return true;
+}
+
+void Sha256Utils::SetDelayStatus(Sha256DelayScene scene)
+{
+    ENGINE_LOGI("sha256DelayScene is %{public}d", static_cast<int32_t>(scene));
+    sha256DelayScene_ = scene;
+}
+
 void Sha256Utils::FreeBuffer(char *buffer, std::ifstream &file)
 {
     if (buffer != nullptr) {
@@ -69,6 +155,14 @@ void Sha256Utils::FreeBuffer(char *buffer, std::ifstream &file)
     if (file.is_open()) {
         file.close();
     }
+}
+
+bool Sha256Utils::GetFileSha256Str(const std::string& fileName, char* sha256Result, uint32_t len,
+    const OnFileVerifyCallback& callback)
+{
+    unsigned char digest[SHA256_LENGTH] = {0};
+    GetDigestFromFile(fileName.c_str(), digest, callback);
+    return TransDigestToSha256Result(sha256Result, len, digest);
 }
 
 bool Sha256Utils::GetDigestFromFile(const char *fileName, unsigned char digest[])

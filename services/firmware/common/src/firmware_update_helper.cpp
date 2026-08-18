@@ -15,6 +15,8 @@
 
 #include "firmware_update_helper.h"
 
+#include "download_task_manager.h"
+
 namespace OHOS {
 namespace UpdateService {
 std::string FirmwareUpdateHelper::BuildTaskId(const std::vector<FirmwareComponent> &componentList)
@@ -42,12 +44,6 @@ void FirmwareUpdateHelper::ClearFirmwareInfo()
     firmwareTaskOperator.DeleteAll();
     FirmwareComponentOperator().DeleteAll();
     FirmwareFileUtils::DeleteDownloadFiles();
-}
-
-// 此处为桩函数，默认电量足够。
-bool FirmwareUpdateHelper::IsBatteryEnough(int32_t batteryLimit)
-{
-    return true;
 }
 
 InstallType FirmwareUpdateHelper::GetInstallType()

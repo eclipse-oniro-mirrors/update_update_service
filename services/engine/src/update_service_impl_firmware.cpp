@@ -61,10 +61,7 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
         businessError.errorNum = CallResult::TIME_OUT;
         businessError.message = "CheckNewVersion TimeOut";
     }
-    auto checkSptr = weakPtr.promote();
-    if (checkSptr) {
-        checkSptr->checkComplete_ = false;
-    }
+    weakPtr->checkComplete_ = false;
     return INT_CALL_SUCCESS;
 }
 
@@ -110,10 +107,24 @@ int32_t UpdateServiceImplFirmware::ResumeDownload(const UpgradeInfo &info,
     BusinessError &businessError)
 {
     FIRMWARE_LOGI("ResumeDownload allowNetwork:%{public}d", CAST_INT(resumeDownloadOptions.allowNetwork));
-    businessError.Build(CallResult::UN_SUPPORT, "resume download not support");
+
+    FirmwareTask task;
+    FirmwareTaskOperator firmwareTaskOperator;
+    firmwareTaskOperator.QueryTask(task);
+    if (task.status != UpgradeStatus::CHECK_VERSION_SUCCESS && task.status != UpgradeStatus::DOWNLOAD_PAUSE) {
+        FIRMWARE_LOGI("download fail current status: %{public}d", CAST_INT(task.status));
+        businessError.Build(CallResult::FAIL, "download error");
+        return INT_CALL_SUCCESS;
+    }
+
+    DownloadOptions downloadOptions;
+    downloadOptions.order = task.downloadOrder;
+    downloadOptions.allowNetwork = resumeDownloadOptions.allowNetwork;
+    firmwareTaskOperator.UpdateDownloadOptionByTaskId(task.taskId, DownloadMode::MANUAL,
+        resumeDownloadOptions.allowNetwork, task.upgradeOrder);
+    FirmwareManager::GetInstance()->DoDownload(downloadOptions, businessError);
     return INT_CALL_SUCCESS;
 }
-
 
 int32_t UpdateServiceImplFirmware::Upgrade(const UpgradeInfo &info, const VersionDigestInfo &versionDigestInfo,
     const UpgradeOptions &upgradeOptions, BusinessError &businessError)
@@ -288,16 +299,23 @@ int32_t UpdateServiceImplFirmware::GetTaskInfo(const UpgradeInfo &info, TaskInfo
 int32_t UpdateServiceImplFirmware::SetUpgradePolicy(const UpgradeInfo &info, const UpgradePolicy &policy,
     BusinessError &businessError)
 {
-    FIRMWARE_LOGI(
-        "SetUpgradePolicy autoDownload %{public}d installmode %{public}d startTime %{public}d endTime %{public}d",
+    FIRMWARE_LOGI("SetUpgradePolicy downloadStrategy %{public}d autoUpgradeStrategy %{public}d startTime %{public}d "
+        "endTime %{public}d",
         policy.downloadStrategy, policy.autoUpgradeStrategy, policy.autoUpgradePeriods[0].start,
         policy.autoUpgradePeriods[1].end);
     businessError.errorNum = CallResult::SUCCESS;
-    bool isAutoDownloadSwitchOn = preferencesUtil_->ObtainBool(Firmware::AUTO_DOWNLOAD_SWITCH, false);
-    FIRMWARE_LOGI("SetUpgradePolicy isAutoDownloadSwitchOn %{public}s",
-        StringUtils::GetBoolStr(isAutoDownloadSwitchOn).c_str());
+    bool isAutoDownloadSwitchOn = preferencesUtil_->GetAutoDownloadSwitch();
+    bool isNightUpgradeSwitchOn = preferencesUtil_->GetNightUpgradeSwitch();
+    FIRMWARE_LOGI("SetUpgradePolicy isAutoDownloadSwitchOn %{public}s, isNightUpgradeSwitchOn %{public}s,",
+        StringUtils::GetBoolStr(isAutoDownloadSwitchOn).c_str(),
+        StringUtils::GetBoolStr(isNightUpgradeSwitchOn).c_str());
+
+    if (isNightUpgradeSwitchOn != policy.autoUpgradeStrategy) {
+        FirmwareManager::GetInstance()->DoAutoUpgradeSwitchChanged(policy.autoUpgradeStrategy);
+    }
+
     if (isAutoDownloadSwitchOn != policy.downloadStrategy) {
-        DelayedSingleton<FirmwareManager>::GetInstance()->DoAutoDownloadSwitchChanged(policy.downloadStrategy);
+        FirmwareManager::GetInstance()->DoAutoDownloadSwitchChanged(policy.downloadStrategy);
     }
     return INT_CALL_SUCCESS;
 }
@@ -305,11 +323,12 @@ int32_t UpdateServiceImplFirmware::SetUpgradePolicy(const UpgradeInfo &info, con
 int32_t UpdateServiceImplFirmware::GetUpgradePolicy(const UpgradeInfo &info, UpgradePolicy &policy,
     BusinessError &businessError)
 {
-    FIRMWARE_LOGI("GetUpgradePolicy");
-    bool isAutoDownloadSwitchOn = preferencesUtil_->ObtainBool(Firmware::AUTO_DOWNLOAD_SWITCH, false);
-    FIRMWARE_LOGI("GetUpgradePolicy isAutoDownloadSwitchOn %{public}s",
-        StringUtils::GetBoolStr(isAutoDownloadSwitchOn).c_str());
-    policy.downloadStrategy = isAutoDownloadSwitchOn;
+    const bool downloadSwitch = preferencesUtil_->GetAutoDownloadSwitch();
+    const bool nightUpgradeSwitch = preferencesUtil_->GetNightUpgradeSwitch();
+    FIRMWARE_LOGI("GetUpgradePolicy isAutoDownloadSwitchOn %{public}s nightUpgradeSwitch: %{public}s",
+        StringUtils::GetBoolStr(downloadSwitch).c_str(), StringUtils::GetBoolStr(nightUpgradeSwitch).c_str());
+    policy.downloadStrategy = downloadSwitch;
+    policy.autoUpgradeStrategy = nightUpgradeSwitch;
     policy.autoUpgradePeriods[0].start =
         static_cast<uint32_t>(Constant::ONE_HOUR_MINUTES * Firmware::NIGHT_UPGRADE_START_HOUR);
     policy.autoUpgradePeriods[0].end =

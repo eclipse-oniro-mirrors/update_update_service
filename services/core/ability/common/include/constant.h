@@ -28,8 +28,19 @@ namespace Constant {
 constexpr int32_t ONE_DAY_HOUR = 24;
 constexpr int32_t ONE_HOUR_MINUTES = 60;
 constexpr int32_t ONE_MINUTE_SECONDS = 60;
-constexpr int32_t FIVE_MINUTES_SECONDS = 5 * Constant::ONE_MINUTE_SECONDS;
+constexpr int32_t FIVE_MINUTES_SECONDS = 5 * ONE_MINUTE_SECONDS;
 constexpr int32_t MILLESECONDS = 1000;
+
+constexpr int32_t ONE_HOUR_SECONDS = 1 * ONE_HOUR_MINUTES * ONE_MINUTE_SECONDS;
+constexpr int32_t ONE_DAY_SECOND = ONE_DAY_HOUR * ONE_HOUR_MINUTES * ONE_MINUTE_SECONDS;
+
+constexpr uint64_t DEFAULT_PULLUP_INTERVAL = ONE_DAY_SECOND; // 默认拉起间隔
+constexpr uint64_t KEEP_ALIVE_THRESHOLD = ONE_HOUR_SECONDS;  // SA空闲阈值
+
+// 默认轮询周期
+constexpr int32_t DEFAULT_AUTO_UPGRADE_HOUR = ONE_HOUR_SECONDS * 24;
+
+constexpr int32_t DEFAULT_UPGRADE_TIME = -1;
 
 static const std::string DUPDATE_ENGINE_CONFIG_PATH = "/system/etc/update/dupdate_config.json";
 
@@ -46,6 +57,7 @@ static const std::string DUPDATE_ENGINE_PACKAGE_ROOT_PATH = UPDATE_PACKAGE_ROOT_
 
 static const std::string DUE_INIT_FLAG = "due_init_flag"; // DUE初始启动标记
 static const std::string PROCESS_RESTART_REASON = "process_restart_reason"; // 进程重启原因
+constexpr int32_t MIN_FILE_DOWNLOAD_SIZE = 10 * 1024 * 1024;
 } // namespace Constant
 
 enum class CommonEventType {
