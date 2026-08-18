@@ -112,7 +112,7 @@ bool UpdateNotify::HandleMessage(const std::string &message)
         return false;
     }
 
-    std::unique_lock<std::mutex> uniqueLock(notifyContext->mtx);
+    std::unique_lock<std::mutex> uniqueLock(notifyContext->connectMutex);
     bool waitOk = notifyContext->conditionVar.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
         [ctx = notifyContext]() { return ctx->state == ConnectState::SUCCESS || ctx->state == ConnectState::FAILED; });
     if (!waitOk || notifyContext->state != ConnectState::SUCCESS || notifyContext->remote == nullptr) {
