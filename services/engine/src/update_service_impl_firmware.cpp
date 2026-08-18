@@ -86,7 +86,7 @@ int32_t UpdateServiceImplFirmware::Download(const UpgradeInfo &info, const Versi
     if (task.status != UpgradeStatus::CHECK_VERSION_SUCCESS) {
         FIRMWARE_LOGI("download fail current status: %{public}d", CAST_INT(task.status));
         businessError.Build(CallResult::FAIL, "download error");
-        return INT_CALL_FAIL;
+        return INT_CALL_SUCCESS;
     }
 
     firmwareTaskOperator.UpdateDownloadOptionByTaskId(task.taskId,
@@ -129,9 +129,7 @@ int32_t UpdateServiceImplFirmware::Upgrade(const UpgradeInfo &info, const Versio
     FirmwareTask task;
     FirmwareTaskOperator firmwareTaskOperator;
     firmwareTaskOperator.QueryTask(task);
-    if (task.isExistTask) {
-        firmwareTaskOperator.UpdateUpgradeModeByTaskId(task.taskId, UpgradeMode::MANUAL);
-    }
+    firmwareTaskOperator.UpdateUpgradeModeByTaskId(task.taskId, UpgradeMode::MANUAL);
     DelayedSingleton<FirmwareManager>::GetInstance()->DoInstall(upgradeOptions, businessError,
         FirmwareUpdateHelper::GetInstallType());
     return INT_CALL_SUCCESS;
@@ -349,7 +347,7 @@ int32_t UpdateServiceImplFirmware::Cancel(const UpgradeInfo &info, int32_t servi
 void UpdateServiceImplFirmware::GetChangelogContent(std::string &dataXml, const std::string &language)
 {
     std::string languageStart = LANGUAGE_ENGLISH;
-    if (language.compare("zh-cn") == 0) {
+    if (language.compare("zh-cn") != 0) {
         languageStart = LANGUAGE_CHINESE;
     }
     StringUtils::StringRemove(dataXml, languageStart, LANGUAGE_END);

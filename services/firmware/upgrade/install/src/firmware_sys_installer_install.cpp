@@ -162,7 +162,6 @@ void SysInstallerInstall::InitInstallProgress()
 int32_t SysInstallerInstall::WaitInstallResult(const std::string &versionId)
 {
     std::unique_lock<std::mutex> lock(installMutex_);
-    int32_t ret = OHOS_SUCCESS;
     uint32_t configTime = DelayedSingleton<ConfigParse>::GetInstance()->GetAbInstallerTimeout();
     FIRMWARE_LOGI("sysinstaller wait result, max wait time=%{public}u", configTime);
 
@@ -173,23 +172,23 @@ int32_t SysInstallerInstall::WaitInstallResult(const std::string &versionId)
         })) {
         FIRMWARE_LOGI("WaitInstallResult time out, sysInstallProgress_.status = %{public}d",
             CAST_INT(sysInstallProgress_.status));
-        ret = OHOS_FAILURE;
-    } else {
-        if (sysInstallProgress_.status == UpgradeStatus::INSTALL_SUCCESS &&
-            sysInstallProgress_.percent == Firmware::ONE_HUNDRED) {
-            FIRMWARE_LOGI("WaitInstallResult INSTALL_SUCCESS");
-            SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateResult(versionId,
-                SysInstaller::TaskTypeConst::TASK_TYPE_AB_UPDATE, SysInstaller::ResultTypeConst::RESULT_TYPE_INSTALL);
-            ret =  OHOS_SUCCESS;
-        } else {
-            FIRMWARE_LOGE("WaitInstallResult fail, sysInstallProgress_.status=%{public}d",
-                CAST_INT(sysInstallProgress_.status));
-            SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateResult(versionId,
-                SysInstaller::TaskTypeConst::TASK_TYPE_AB_UPDATE, SysInstaller::ResultTypeConst::RESULT_TYPE_INSTALL);
-            ret = OHOS_FAILURE;
-        }
+        return OHOS_FAILURE;
     }
-    return ret;
+    
+    bool isSuccess = (sysInstallProgress_.status == UpgradeStatus::INSTALL_SUCCESS &&
+                      sysInstallProgress_.percent == Firmware::ONE_HUNDRED);
+
+    if (isSuccess) {
+        FIRMWARE_LOGI("WaitInstallResult INSTALL_SUCCESS");
+    } else {
+        FIRMWARE_LOGE("WaitInstallResult fail, sysInstallProgress_.status=%{public}d",
+            CAST_INT(sysInstallProgress_.status));
+    }
+
+    SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateResult(versionId,
+        SysInstaller::TaskTypeConst::TASK_TYPE_AB_UPDATE,
+        SysInstaller::ResultTypeConst::RESULT_TYPE_INSTALL);
+    return isSuccess ? OHOS_SUCCESS : OHOS_FAILURE;
 }
 } // namespace UpdateService
 } // namespace OHOS
