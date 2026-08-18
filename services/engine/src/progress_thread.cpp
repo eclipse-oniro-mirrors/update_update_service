@@ -91,7 +91,7 @@ void ProgressThread::ExecuteThreadFunc()
 
 int32_t DownloadThread::StartDownload(const std::string &fileName, const std::string &url)
 {
-    ENGINE_LOGI("StartDownload downloadFileName_ %{private}s, serverUrl_ = %{private}s", downloadFileName_.c_str(), 
+    ENGINE_LOGI("StartDownload downloadFileName_ %{private}s, serverUrl_ = %{private}s", downloadFileName_.c_str(),
         serverUrl_.c_str());
     downloadFileName_ = fileName;
     serverUrl_ = url;
