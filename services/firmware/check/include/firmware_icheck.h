@@ -151,7 +151,7 @@ private:
         SSL_library_init();
         OpenSSL_add_all_algorithms();
         SSL_load_error_strings();
-        SSL_CTX *sslCtx = SSL_CTX_new(SSLv23_client_method());
+        SSL_CTX *sslCtx = SSL_CTX_new(TLS_client_method());
         ENGINE_CHECK(sslCtx != nullptr, return -1, "sslCtx is nullptr");
         SSL *ssl = SSL_new(sslCtx);
         ENGINE_CHECK(ssl != nullptr,
@@ -160,27 +160,34 @@ private:
             "ssl is nullptr");
         SSL_set_fd(ssl, engineSocket);
         int32_t ret = SSL_connect(ssl);
-        if (ret != -1) {
+        if (ret == 1) {
             std::string serverIp = OHOS::system::GetParameter(PARAM_NAME_FOR_SEARCH, DEFAULT_SERVER_IP);
             std::string request = "GET /config.json HTTP/1.1\r\nHost: " + serverIp + ":" +
                 std::to_string(PORT_NUMBER) + "\r\nConnection: close\r\n\r\n";
-            SSL_write(ssl, request.c_str(), request.size());
-            int32_t len = SSL_read(ssl, buffer.data(), JSON_MAX_SIZE);
-            if (len > 0 && ParseJsonFile(buffer, response) == 0) {
-                result = SearchStatus::HAS_NEW_VERSION;
-                errMsg = "";
+            int32_t writeLen = SSL_write(ssl, request.c_str(), request.size());
+            if (writeLen > 0) {
+                int32_t len = SSL_read(ssl, buffer.data(), JSON_MAX_SIZE);
+                if (len > 0 && ParseJsonFile(buffer, response) == 0) {
+                    result = SearchStatus::HAS_NEW_VERSION;
+                    errMsg = "";
+                } else {
+                    result = SearchStatus::SYSTEM_ERROR;
+                    errMsg = "Couldn't read data";
+                }
             } else {
                 result = SearchStatus::SYSTEM_ERROR;
-                errMsg = "Couldn't read data";
+                errMsg = "Write request failed";
             }
         } else {
             result = SearchStatus::SYSTEM_ERROR;
-            errMsg = "Couldn't connect to server";
+            errMsg = "SSL handshake failed";
+            int32_t sslErr = SSL_get_error(ssl, ret);
+            FIRMWARE_LOGE("SSL_connect failed, ret: %{public}d, ssl_err: %{public}d", ret, sslErr);
         }
         SSL_shutdown(ssl);
         SSL_free(ssl);
         SSL_CTX_free(sslCtx);
-        FIRMWARE_LOGI("ReadDataFromSSL errMsg: %s, result: %d", errMsg.c_str(), result);
+        FIRMWARE_LOGI("ReadDataFromSSL errMsg: %{public}s, result: %{public}d", errMsg.c_str(), result);
         return result == SearchStatus::HAS_NEW_VERSION ? 0 : -1;
     }
 
