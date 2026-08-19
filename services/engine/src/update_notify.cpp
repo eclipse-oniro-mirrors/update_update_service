@@ -35,6 +35,12 @@ UpdateNotify::UpdateNotify()
 UpdateNotify::~UpdateNotify()
 {
     ENGINE_LOGD("~UpdateNotify");
+    std::unique_lock lock(connectLock_);
+    if (connectionStub_ == nullptr) {
+        return;
+    }
+    DisconnectAbility(connectionStub_);
+    connectionStub_ = nullptr;
 }
 
 sptr<UpdateNotify> UpdateNotify::GetInstance()
@@ -93,100 +99,100 @@ bool UpdateNotify::ConnectToAppService(const std::string &eventInfo, const std::
     return HandleMessage(message);
 }
 
-bool UpdateNotify::HandleMessage(const std::string &message)
+bool UpdateNotify::ConnectAbility(const sptr<NotifyConnection> &connect)
 {
+    if (connect == nullptr) {
+        ENGINE_LOGE("ConnectAbility error, connect is null");
+        return false;
+    }
     std::string bundleName = UPDATE_APP_PACKAGE_NAME;
     std::string abilityName = UPDATE_APP_SERVICE_EXT_ABILITY_NAME;
     AAFwk::Want want;
     want.SetElementName(bundleName, abilityName);
     want.SetParam("Timeout", UPDATE_APP_TIMEOUT);
+    return ConnectAbility(want, connect) == ERR_OK;
+}
 
-    auto notifyContext = sptr<NotifyConnectContext>::MakeSptr();
-    notifyContext->state = ConnectState::WAITING;
-    auto connect = sptr<NotifyConnection>::MakeSptr(notifyContext);
+sptr<IRemoteObject> UpdateNotify::GetRemoteConnectObj()
+{
+    std::unique_lock lock(connectLock_);
+    if (connectionStub_ == nullptr) {
+        connectionStub_ = sptr<NotifyConnection>::MakeSptr();
+    }
+    if (connectionStub_->IsConnected()) {
+        sptr<NotifyConnection> stub = connectionStub_;
+        lock.unlock();
+        return stub->GetRemoteObj();
+    }
+    if (!ConnectAbility(connectionStub_)) {
+        return nullptr;
+    }
+    sptr<NotifyConnection> stub = connectionStub_;
+    lock.unlock();
+    return connectionStub_->GetRemoteObj();
+}
 
-    ErrCode ret = ConnectAbility(want, connect);
-    if (ret != OHOS::ERR_OK) {
-        ENGINE_LOGE("HandleMessage connect failed immediately");
-        DisconnectAbility(connect);
+bool UpdateNotify::HandleMessage(const std::string &message)
+{
+    const sptr<IRemoteObject> remoteObj = GetRemoteConnectObj();
+    if (remoteObj == nullptr) {
+        ENGINE_LOGE("HandleMessage error, remote obj is null");
         return false;
     }
-
-    std::unique_lock<std::mutex> uniqueLock(notifyContext->connectMutex);
-    bool waitOk = notifyContext->conditionVar.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
-        [ctx = notifyContext]() { return ctx->state == ConnectState::SUCCESS || ctx->state == ConnectState::FAILED; });
-    if (!waitOk || notifyContext->state != ConnectState::SUCCESS || notifyContext->remote == nullptr) {
-        uniqueLock.unlock();
-        ENGINE_LOGE("HandleMessage connect fail, state:%{public}d", static_cast<int>(notifyContext->state));
-        DisconnectAbility(connect);
-        return false;
-    }
-    sptr<IRemoteObject> remote = notifyContext->remote;
-    uniqueLock.unlock();
 
     MessageParcel data;
     if (!data.WriteString16(Str8ToStr16(message))) {
         ENGINE_LOGE("HandleMessage, write message failed");
-        DisconnectAbility(connect);
         return false;
     }
 
     MessageParcel reply;
     MessageOption option(MessageOption::TF_SYNC);
 
-    int32_t result = remote->SendRequest(CAST_INT(UpdateAppCode::UPDATE_APP), data, reply, option);
-    DisconnectAbility(connect);
+    int32_t result = remoteObj->SendRequest(CAST_INT(UpdateAppCode::UPDATE_APP), data, reply, option);
     if (result != 0) {
         ENGINE_LOGE("HandleMessage SendRequest, error result %{public}d", result);
         return false;
     }
-
     return true;
 }
 
-NotifyConnection::NotifyConnection(sptr<NotifyConnectContext> connectContext) : connectContext_(connectContext)
+sptr<IRemoteObject> NotifyConnection::GetRemoteObj()
 {
-    ENGINE_LOGD("NotifyConnection constructor");
+    std::unique_lock<std::mutex> uniqueLock(connectMutex_);
+    if (remoteObject_ == nullptr) {
+        conditionVar_.wait_for(uniqueLock, std::chrono::seconds(UPDATE_APP_CONNECT_TIMEOUT),
+            [this] { return remoteObject_ != nullptr; });
+    }
+    return remoteObject_;
+}
+
+bool NotifyConnection::IsConnected()
+{
+    std::unique_lock<std::mutex> uniqueLock(connectMutex_);
+    return remoteObject_ != nullptr;
 }
 
 void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &element,
     const sptr<IRemoteObject> &remoteObject, int32_t resultCode)
 {
     ENGINE_LOGI("OnAbilityConnectDone successfully. result %{public}d", resultCode);
-    if (connectContext_ == nullptr) {
-        ENGINE_LOGE("connectContext_ is nullptr");
-        return;
+    std::unique_lock<std::mutex> uniqueLock(connectMutex_);
+    if (resultCode == 0 && remoteObject != nullptr) {
+        remoteObject_ = remoteObject;
+    } else {
+        ENGINE_LOGE("OnAbilityConnectDone failed, resultCode=%{public}d", resultCode);
+        remoteObject_ = nullptr;
     }
-    std::lock_guard<std::mutex> lock(connectContext_->connectMutex);
-    if (connectContext_->state != ConnectState::WAITING) {
-        ENGINE_LOGE("OnAbilityConnectDone skip, task finished already");
-        return;
-    }
-    if (resultCode != ERR_OK) {
-        ENGINE_LOGE("ability connect failed, error code: %{public}d", resultCode);
-        connectContext_->state = ConnectState::FAILED;
-        connectContext_->conditionVar.notify_one();
-        return;
-    }
-
-    if (remoteObject == nullptr) {
-        ENGINE_LOGE("remoteObject is nullptr");
-        connectContext_->state = ConnectState::FAILED;
-        connectContext_->conditionVar.notify_one();
-        return;
-    }
-    connectContext_->remote = remoteObject;
-    connectContext_->state = ConnectState::SUCCESS;
-    connectContext_->conditionVar.notify_one();
+    conditionVar_.notify_all();
 }
 
 void NotifyConnection::OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode)
 {
     ENGINE_LOGI("OnAbilityDisconnectDone successfully. result %{public}d", resultCode);
-    if (connectContext_ != nullptr) {
-        std::lock_guard<std::mutex> lock(connectContext_->connectMutex);
-        connectContext_->remote = nullptr;
-    }
+    std::unique_lock<std::mutex> uniqueLock(connectMutex_);
+    remoteObject_ = nullptr;
+    conditionVar_.notify_all();
 }
 } // namespace UpdateService
 } // namespace OHOS
