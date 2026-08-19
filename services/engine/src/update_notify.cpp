@@ -35,12 +35,15 @@ UpdateNotify::UpdateNotify()
 UpdateNotify::~UpdateNotify()
 {
     ENGINE_LOGD("~UpdateNotify");
-    std::unique_lock lock(connectLock_);
-    if (connectionStub_ == nullptr) {
-        return;
+    sptr<NotifyConnection> stubToDisconnect;
+    {
+        std::lock_guard<std::mutex> lock(connectLock_);
+        stubToDisconnect = connectionStub_;
+        connectionStub_ = nullptr;
     }
-    DisconnectAbility(connectionStub_);
-    connectionStub_ = nullptr;
+    if (stubToDisconnect != nullptr) {
+        DisconnectAbility(stubToDisconnect);
+    }
 }
 
 sptr<UpdateNotify> UpdateNotify::GetInstance()
@@ -119,17 +122,18 @@ sptr<IRemoteObject> UpdateNotify::GetRemoteConnectObj()
     if (connectionStub_ == nullptr) {
         connectionStub_ = sptr<NotifyConnection>::MakeSptr();
     }
+    sptr<NotifyConnection> connectionSptr;
     if (connectionStub_->IsConnected()) {
-        sptr<NotifyConnection> stub = connectionStub_;
+        connectionSptr = connectionStub_;
         lock.unlock();
-        return stub->GetRemoteObj();
+        return connectionSptr->GetRemoteObj();
     }
     if (!ConnectAbility(connectionStub_)) {
         return nullptr;
     }
-    sptr<NotifyConnection> stub = connectionStub_;
+    connectionSptr = connectionStub_;
     lock.unlock();
-    return connectionStub_->GetRemoteObj();
+    return connectionSptr->GetRemoteObj();
 }
 
 bool UpdateNotify::HandleMessage(const std::string &message)
@@ -152,6 +156,15 @@ bool UpdateNotify::HandleMessage(const std::string &message)
     int32_t result = remoteObj->SendRequest(CAST_INT(UpdateAppCode::UPDATE_APP), data, reply, option);
     if (result != 0) {
         ENGINE_LOGE("HandleMessage SendRequest, error result %{public}d", result);
+        sptr<NotifyConnection> stubToDisconnect;
+        {
+            std::lock_guard<std::mutex> lock(connectLock_);
+            stubToDisconnect = connectionStub_;
+            connectionStub_ = nullptr;
+        }
+        if (stubToDisconnect != nullptr) {
+            DisconnectAbility(stubToDisconnect);
+        }
         return false;
     }
     return true;
@@ -176,7 +189,7 @@ bool NotifyConnection::IsConnected()
 void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &element,
     const sptr<IRemoteObject> &remoteObject, int32_t resultCode)
 {
-    ENGINE_LOGI("OnAbilityConnectDone successfully. result %{public}d", resultCode);
+    ENGINE_LOGI("OnAbilityConnectDone result %{public}d", resultCode);
     std::unique_lock<std::mutex> uniqueLock(connectMutex_);
     if (resultCode == 0 && remoteObject != nullptr) {
         remoteObject_ = remoteObject;
@@ -189,7 +202,7 @@ void NotifyConnection::OnAbilityConnectDone(const AppExecFwk::ElementName &eleme
 
 void NotifyConnection::OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode)
 {
-    ENGINE_LOGI("OnAbilityDisconnectDone successfully. result %{public}d", resultCode);
+    ENGINE_LOGI("OnAbilityDisconnectDone result %{public}d", resultCode);
     std::unique_lock<std::mutex> uniqueLock(connectMutex_);
     remoteObject_ = nullptr;
     conditionVar_.notify_all();
