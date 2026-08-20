@@ -17,6 +17,7 @@
 #define FIRMWARE_IEXECUTOR_H
 
 #include "error_message.h"
+#include "event_id.h"
 #include "firmware_common.h"
 #include "firmware_component.h"
 #include "firmware_log.h"
@@ -34,6 +35,15 @@ struct FirmwareCheckComponentCallback {
 using ProgressCallback = std::function<void(const Progress &progress)>;
 struct FirmwareProgressCallback {
     ProgressCallback progressCallback;
+};
+
+using FirmwareDownloadCallbackFunc = std::function<void(const FirmwareDownloadCallbackInfo &downloadCallbackInfo)>;
+using FirmwareEventCallbackFunc = std::function<void(const std::string taskId, const EventId &eventId)>;
+
+
+struct FirmwareDownloadCallback {
+    FirmwareDownloadCallbackFunc progressCallback = nullptr;
+    FirmwareEventCallbackFunc eventCallback = nullptr;
 };
 
 struct InstallCallbackInfo {

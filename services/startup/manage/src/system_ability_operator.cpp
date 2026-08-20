@@ -18,37 +18,38 @@
 #include <iservice_registry.h>
 
 #include "errors.h"
-#include "network_type.h"
+#include "common_event_support.h"
 #include "system_ability_definition.h"
 
 #include "update_log.h"
 
 namespace OHOS {
 namespace UpdateService {
-bool SystemAbilityOperator::UpdateStartupPolicy(const std::vector<ScheduleTask> &scheduleTasks)
+bool SystemAbilityOperator::UpdateStartupPolicy(const std::vector<ScheduleTask> &scheduleTasks,
+    const std::string &timeEventName)
 {
     ENGINE_LOGI("UpdateStartupPolicy");
     constexpr uint64_t validMinInterval = 30;
     std::vector<SystemAbilityOnDemandEvent> abilityOnDemandEvents;
     for (const auto &task : scheduleTasks) {
-         // 启停policy中增加TIMED事件
+        // 启停Policy中增加TIMED事件
         if (task.minDelayTime >= validMinInterval) {
-            abilityOnDemandEvents.emplace_back(CreateTimedEvent(task.minDelayTime));
-            ENGINE_LOGI("UpdateStartupPolicy update timed event, loop interval %{public}s",
-                std::to_string(task.minDelayTime).c_str());
+            abilityOnDemandEvents.emplace_back(CreateTimedEvent(task.minDelayTime, timeEventName));
+            ENGINE_LOGI("UpdateStartupPolicy update timed event : %{public}s, loop interval %{public}s",
+                timeEventName.c_str(), std::to_string(task.minDelayTime).c_str());
         } else {
-            ENGINE_LOGE("UpdateStartupPolicy failure, invalid loop interval %{public}s",
-                std::to_string(task.minDelayTime).c_str());
+            ENGINE_LOGE("UpdateStartupPolicy : %{public}s, failure, invalid loop interval %{public}s",
+                timeEventName.c_str(), std::to_string(task.minDelayTime).c_str());
             return false;
         }
     }
+
     return UpdateStartupOnDemandPolicy(abilityOnDemandEvents);
 }
 
-SystemAbilityOnDemandEvent SystemAbilityOperator::CreateTimedEvent(const uint64_t nextStartDuration)
+SystemAbilityOnDemandEvent SystemAbilityOperator::CreateTimedEvent(uint64_t nextStartDuration,
+    const std::string &timedEventName)
 {
-    const std::string timedEventName = "loopevent"; // TIMED 事件名称，不可更改
-
     SystemAbilityOnDemandEvent timedEvent;
     timedEvent.eventId = OnDemandEventId::TIMED_EVENT;
     timedEvent.name = timedEventName;

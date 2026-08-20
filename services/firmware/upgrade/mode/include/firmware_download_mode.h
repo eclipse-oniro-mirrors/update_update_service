@@ -40,6 +40,8 @@ public:
     ~FirmwareDownloadMode() = default;
     FirmwareStep GetNextStep(FirmwareStep step) final;
     void SetDownloadProgress(const Progress &progress) final;
+    void SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo& callbackInfo) override;
+    void SetDownloadEvent(const std::string &downloadTaskId, EventId eventId) override;
     DownloadOptions GetDownloadOptions() final;
     void HandleComplete() final;
 
@@ -47,11 +49,6 @@ private:
     FirmwareStep GetStepAfterInit();
     FirmwareStep GetStepAfterDownload();
     void GetTask();
-
-    void DownloadSucessProcess(const FirmwareTask &task, const ErrorMessage &errorMessage);
-    void DownloadFailProcess(const FirmwareTask &task, const ErrorMessage &errorMessage);
-    void DownloadCancelProcess(const FirmwareTask &task, const ErrorMessage &errorMessage);
-    void DownloadPauseProcess(const FirmwareTask &task, const ErrorMessage &errorMessage);
 
 private:
     FirmwareDownloadDataProcessor downloadDataProcessor_;

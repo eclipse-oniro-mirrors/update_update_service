@@ -38,14 +38,16 @@ public:
         return FirmwareStep::COMPLETE;
     };
 
+    virtual void SetDownloadEvent(const std::string &downloadTaskId, EventId eventId) {}
     virtual void SetCheckResult(CheckStatus status, const Duration &duration,
-        const std::vector<FirmwareComponent> &componentList, const CheckAndAuthInfo &checkAndAuthInfo) {};
-    virtual void SetDownloadProgress(const Progress &progress) {};
-    virtual void SetInstallResult(const InstallCallbackInfo &installCallbackInfo) {};
-    virtual void SetApplyResult(bool isSuccess) {};
+        const std::vector<FirmwareComponent> &componentList, const CheckAndAuthInfo &checkAndAuthInfo){};
+    virtual void SetDownloadProgress(const Progress &progress){};
+    virtual void SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo){};
+    virtual void SetInstallResult(const InstallCallbackInfo &installCallbackInfo){};
+    virtual void SetApplyResult(bool isSuccess){};
 
     // HandleComplete 往FirmwareManager回调之后，当前mode会被析构掉，因此后续不应该再调用任何逻辑
-    virtual void HandleComplete() {};
+    virtual void HandleComplete(){};
 
     virtual DownloadOptions GetDownloadOptions()
     {

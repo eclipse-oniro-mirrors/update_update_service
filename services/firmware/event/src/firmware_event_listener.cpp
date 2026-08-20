@@ -17,6 +17,7 @@
 
 #include "constant.h"
 #include "dupdate_net_manager.h"
+#include "firmware_event_manager.h"
 #include "firmware_log.h"
 #include "firmware_manager.h"
 #include "update_define.h"
@@ -40,7 +41,7 @@ void FirmwareEventListener::RegisterNetChangedListener()
         {NetType::CELLULAR, NetType::METERED_WIFI, NetType::NOT_METERED_WIFI, NetType::NO_NET},
         [=](NetType netType) {
             FIRMWARE_LOGI("FirmwareEventListener on NetChanged type: %{public}d", CAST_INT(netType));
-            DelayedSingleton<FirmwareManager>::GetInstance()->HandleEvent(CommonEventType::NET_CHANGED);
+            DelayedSingleton<FirmwareEventManager>::GetInstance()->HandleEvent(CommonEventType::NET_CHANGED);
         });
 }
 

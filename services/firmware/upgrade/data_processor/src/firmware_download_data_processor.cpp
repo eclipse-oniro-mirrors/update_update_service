@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -61,11 +61,49 @@ bool FirmwareDownloadDataProcessor::IsSpaceEnough(int64_t &requireTotalSize)
     return isDownloadSpaceEnough;
 }
 
+void FirmwareDownloadDataProcessor::SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo)
+{
+    GetTask();
+    downloadProgress_ = callbackInfo.taskProgress;
+    FIRMWARE_LOGI("SetDownloadProgress status: %{public}d progress: %{public}d", downloadProgress_.status,
+        downloadProgress_.percent);
+
+    for (const auto &componentProgress : callbackInfo.progressList) {
+        FIRMWARE_LOGI("component versionId: %{public}s  status: %{public}d progress is: %{public}d",
+            componentProgress.versionId.c_str(), CAST_INT(componentProgress.progress.status),
+            CAST_INT(componentProgress.progress.percent));
+        componentOperator_.UpdateProgressByVersionId(componentProgress.versionId, componentProgress.progress.status,
+            CAST_INT(componentProgress.progress.percent));
+    }
+    taskOperator_.UpdateProgressByTaskId(tasks_.taskId, downloadProgress_.status, CAST_INT(downloadProgress_.percent));
+
+    FirmwareCallbackUtils::GetInstance()->ProgressCallback(tasks_.taskId, callbackInfo.taskProgress);
+}
+
+void FirmwareDownloadDataProcessor::SetDownloadEvent(const std::string &downloadTaskId, EventId eventId)
+{
+    GetTask();
+    if (eventId == EventId::EVENT_DOWNLOAD_START) {
+        FIRMWARE_LOGI("SetDownloadEvent handle download start");
+        taskOperator_.UpdateDownloadTaskIdByTaskId(tasks_.taskId, downloadTaskId);
+        taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
+
+        FirmwareCallbackUtils::GetInstance()->NotifyEvent(tasks_.taskId, EventId::EVENT_DOWNLOAD_START,
+            UpgradeStatus::DOWNLOADING);
+        return;
+    }
+
+    if (eventId == EventId::EVENT_DOWNLOAD_RESUME) {
+        FIRMWARE_LOGI("SetDownloadEvent handle download resume");
+        taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
+        FirmwareCallbackUtils::GetInstance()->NotifyEvent(tasks_.taskId, EventId::EVENT_DOWNLOAD_RESUME,
+            UpgradeStatus::DOWNLOADING);
+    }
+}
+
 void FirmwareDownloadDataProcessor::GetTask()
 {
-    if (!tasks_.isExistTask) {
-        FirmwareTaskOperator().QueryTask(tasks_);
-    }
+    FirmwareTaskOperator().QueryTask(tasks_);
 }
 
 void FirmwareDownloadDataProcessor::SetDownloadProgress(const Progress &progress)

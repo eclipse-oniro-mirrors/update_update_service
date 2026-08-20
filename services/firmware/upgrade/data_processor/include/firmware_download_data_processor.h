@@ -16,8 +16,11 @@
 #ifndef FIRMWARE_DOWNLOAD_DATA_RPOCESSOR_H
 #define FIRMWARE_DOWNLOAD_DATA_RPOCESSOR_H
 
+#include "event_id.h"
 #include "firmware_common.h"
+#include "firmware_component_operator.h"
 #include "firmware_task.h"
+#include "firmware_task_operator.h"
 #include "progress.h"
 
 namespace OHOS {
@@ -31,7 +34,8 @@ public:
     Progress GetDownloadProgress();
     bool IsDownloadSuccess();
     bool IsSpaceEnough(int64_t &requireTotalSize);
-    void ClearFirmwareInfo();
+    void SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo);
+    void SetDownloadEvent(const std::string &downloadTaskId, EventId eventId);
 
 private:
     void GetTask();
@@ -39,6 +43,9 @@ private:
 private:
     FirmwareTask tasks_;
     Progress downloadProgress_;
+
+    FirmwareComponentOperator componentOperator_;
+    FirmwareTaskOperator taskOperator_;
 };
 } // namespace UpdateService
 } // namespace OHOS

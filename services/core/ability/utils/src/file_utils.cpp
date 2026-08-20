@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,6 +51,17 @@ bool FileUtils::IsFileExist(const std::string &fileName)
     return f.good();
 }
 
+int64_t FileUtils::GetFileSize(const std::string &fileName)
+{
+    std::error_code errorCode;
+    int64_t fileSize = static_cast<int64_t>(std::filesystem::file_size(fileName, errorCode));
+    if (errorCode.operator bool()) {
+        ENGINE_LOGE("get file size error, file = %{public}s", fileName.c_str());
+        return 0;
+    }
+    return fileSize;
+}
+
 bool FileUtils::IsSpaceEnough(const std::string &filePath, const int64_t requiredSpace)
 {
     uint64_t freeSpace = 0;
@@ -94,7 +105,7 @@ void FileUtils::DeleteFile(const std::string &rootPath, bool isDeleteRootDir)
         return;
     }
 
-    for (auto const &dirEntry : std::filesystem::directory_iterator { myPath }) {
+    for (auto const & dirEntry : std::filesystem::directory_iterator{ myPath }) {
         RemoveAll(dirEntry.path());
     }
 }
@@ -201,6 +212,25 @@ bool FileUtils::CreatDirWithPermission(const std::string &fileDir, int32_t dirPe
     return true;
 }
 
+std::string FileUtils::GetFileOpenMode(OpenMode mode, StreamMode streamMode)
+{
+    static const std::map<OpenMode, std::string> modeMap = {
+        { OpenMode::READ_ONLY, "r" },   { OpenMode::WRITE_CREATE, "w" },       { OpenMode::APPEND_CREATE, "a" },
+        { OpenMode::READ_WRITE, "r+" }, { OpenMode::READ_WRITE_CREATE, "w+" }, { OpenMode::READ_APPEND_CREATE, "a+" },
+    };
+    std::string realMode;
+    auto iter = modeMap.find(mode);
+    if (iter == modeMap.end()) {
+        ENGINE_LOGE("GetFileOpenMode failed, invalid mode: %{public}d", mode);
+        return realMode;
+    }
+    realMode = iter->second;
+    if (streamMode == StreamMode::BINARY) {
+        realMode.insert(1, "b");
+    }
+    return realMode;
+}
+
 std::string FileUtils::ReadDataFromFile(const std::string &filePath)
 {
     char dealPath[PATH_MAX] = {};
@@ -243,6 +273,35 @@ std::string FileUtils::GetFileRealPath(const std::string &filePath)
 
     std::string fileName = filePath.substr(lastSlashPos + 1);
     return std::string(realPath) + "/" + fileName;
+}
+
+std::shared_ptr<FILE> FileUtils::CreateFileSharedPtr(const std::string &filePath, OpenMode openMode, int32_t permission,
+    StreamMode streamMode)
+{
+    auto fileRealPath = GetFileRealPath(filePath);
+    if (fileRealPath.empty()) {
+        return nullptr;
+    }
+
+    std::string realMode = GetFileOpenMode(openMode, streamMode);
+    FILE *fp = fopen(fileRealPath.c_str(), realMode.c_str());
+    if (fp == nullptr) {
+        ENGINE_LOGE("OpenFile failed, errno: %{public}d", errno);
+        return nullptr;
+    }
+    std::shared_ptr<FILE> fileSharedPtr(fp, [filePath](FILE *ptr) {
+        if (ptr != nullptr) {
+            ENGINE_LOGI("close file, filePath: %{private}s", filePath.c_str());
+            fclose(ptr);
+            ptr = nullptr;
+        }
+    });
+
+    if (permission != -1 && chmod(filePath.c_str(), permission) != 0) {
+        ENGINE_LOGE("OpenFile failed, chmod error: %{public}d", errno);
+        return nullptr;
+    }
+    return fileSharedPtr;
 }
 } // namespace UpdateService
 } // namespace OHOS

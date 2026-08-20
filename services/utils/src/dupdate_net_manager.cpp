@@ -58,6 +58,15 @@ bool NetManager::RegisterCallback(
     }
     std::lock_guard<std::mutex> guard(netChangeMutex_);
     netChangeCallbackMap_[callbackType] = {netTypes, cb};
+
+    for (auto netType : netTypes) {
+        if (IsNetAvailable(netType)) {
+            ENGINE_LOGI("RegisterCallback, callBack during register, callbackType %{public}d, netType %{public}d",
+                CAST_INT(callbackType), CAST_INT(netType));
+            onNetChangeQueue_.submit_h([cb, netType] { cb(netType); });
+            break;
+        }
+    }
     return true;
 }
 

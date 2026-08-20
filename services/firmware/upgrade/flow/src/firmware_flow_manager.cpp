@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -104,6 +104,18 @@ void FirmwareFlowManager::OnDownloadCallback(const Progress &progress)
     }
 }
 
+void FirmwareFlowManager::OnDownloadCallback(const FirmwareDownloadCallbackInfo &downloadCallbackInfo)
+{
+    if (executeMode_ == nullptr) {
+        FIRMWARE_LOGE("FirmwareFlowManager executeMode is null");
+        return;
+    }
+    executeMode_->SetDownloadCallbackInfo(downloadCallbackInfo);
+    if (downloadCallbackInfo.taskProgress.status != UpgradeStatus::DOWNLOADING) {
+        Execute();
+    }
+}
+
 void FirmwareFlowManager::OnInstallCallback(const InstallCallbackInfo &installCallbackInfo)
 {
     FIRMWARE_LOGI("FirmwareFlowManager::OnInstallCallback");
@@ -128,6 +140,16 @@ void FirmwareFlowManager::OnApplyCallback(bool isSuccess)
     Execute();
 }
 
+void FirmwareFlowManager::OnDownloadEventCallback(const std::string downloadTaskId, const EventId &eventId)
+{
+    FIRMWARE_LOGI("FirmwareFlowManager::OnDownloadEventCallback");
+    if (executeMode_ == nullptr) {
+        FIRMWARE_LOGE("FirmwareFlowManager executeMode is null");
+        return;
+    }
+    executeMode_->SetDownloadEvent(downloadTaskId, eventId);
+}
+
 std::shared_ptr<FirmwareIExecutor> FirmwareFlowManager::CreateInstance(FirmwareStep step)
 {
     std::shared_ptr<FirmwareIExecutor> executor = nullptr;
@@ -141,8 +163,13 @@ std::shared_ptr<FirmwareIExecutor> FirmwareFlowManager::CreateInstance(FirmwareS
             break;
         }
         case FirmwareStep::DOWNLOAD_STEP: {
-            FirmwareProgressCallback downloadCallback{[=](const Progress &progress) { OnDownloadCallback(progress); }};
-            executor = std::make_shared<FirmwareDownloadExecutor>(executeMode_->GetDownloadOptions(), downloadCallback);
+            FirmwareDownloadCallback callback{
+                [=](const FirmwareDownloadCallbackInfo &progress) { OnDownloadCallback(progress); },
+                [=](const std::string downloadTaskId, const EventId &eventId) {
+                    OnDownloadEventCallback(downloadTaskId, eventId);
+                }
+            };
+            executor = std::make_shared<FirmwareDownloadExecutor>(executeMode_->GetDownloadOptions(), callback);
             break;
         }
         case FirmwareStep::INSTALL_STEP: {

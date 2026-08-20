@@ -25,11 +25,12 @@
 
 namespace OHOS {
 namespace UpdateService {
-class FirmwareInstallExecutor : public FirmwareIExecutor {
+class FirmwareInstallExecutor : public FirmwareIExecutor, public std::enable_shared_from_this<FirmwareInstallExecutor> {
 public:
     FirmwareInstallExecutor(InstallType installType, FirmwareInstallExecutorCallback firmwareInstallCallback)
-        : installType_(installType), installCallback_(firmwareInstallCallback) {}
-    ~FirmwareInstallExecutor() = default;
+        : installType_(installType), installCallback_(firmwareInstallCallback)
+    {}
+    ~FirmwareInstallExecutor() override = default;
     void Execute() final;
 
 private:

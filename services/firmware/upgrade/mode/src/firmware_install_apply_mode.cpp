@@ -31,6 +31,9 @@
 #include "firmware_task_operator.h"
 #include "firmware_update_helper.h"
 
+#include "battery_state_utils.h"
+#include "device_idle_utils.h"
+
 namespace OHOS {
 namespace UpdateService {
 FirmwareStep FirmwareInstallApplyMode::GetNextStep(FirmwareStep step)
@@ -105,11 +108,14 @@ bool FirmwareInstallApplyMode::IsAllowInstall()
         return false;
     }
 
-    if (!FirmwareUpdateHelper::IsBatteryEnough(MANUAL_UPGRADE_BATTERY_LEVEL)) {
+    if (!BatteryStateUtils::IsBatteryEnough(MANUAL_UPGRADE_BATTERY_LEVEL)) {
         FIRMWARE_LOGE("IsAllowInstall isBatteryEnough is false");
         businessError_.Build(CallResult::FAIL, "install condition fail!");
         businessError_.AddErrorMessage(CAST_INT(DUPDATE_ERR_LOW_BATTERY_LEVEL), "battery is low");
         return false;
+    }
+    if (tasks_.upgradeMode == UpgradeMode::NIGHT) {
+        return DeviceIdleUtils::IsDeviceIdle();
     }
     return true;
 }
