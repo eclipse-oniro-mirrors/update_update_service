@@ -72,24 +72,30 @@ int32_t SysInstallerInstall::InitSysInstaller(const FirmwareComponent &firmwareC
 
 int32_t SysInstallerInstall::SetupInstallCallback(FirmwareComponent firmwareComponent)
 {
-    SysInstallerExecutorCallback callback { [this, firmwareComponent](const InstallProgress &installProgress) mutable {
+    std::weak_ptr<SysInstallerInstall> weakThis = weak_from_this();
+    SysInstallerExecutorCallback callback { [weakThis, firmwareComponent](const InstallProgress &installProgress) mutable {
+        auto self = weakThis.lock();
+        if (!self) {
+            FIRMWARE_LOGE("SysInstallerInstall has been destroyed, skip callback");
+            return;
+        }
         {
-            std::lock_guard<std::mutex> lock(installMutex_);
-            sysInstallProgress_ = installProgress.progress;
-            errMsg_ = installProgress.errMsg;
-            resultReady_.store(true);
+            std::lock_guard<std::mutex> lock(self->installMutex_);
+            self->sysInstallProgress_ = installProgress.progress;
+            self->errMsg_ = installProgress.errMsg;
+            self->resultReady_.store(true);
         }
 
-        installCond_.notify_one();
+        self->installCond_.notify_one();
         firmwareComponent.status = installProgress.progress.status;
         firmwareComponent.progress = installProgress.progress.percent;
-        FIRMWARE_LOGI("SysInstallerExecutorCallback status=%{public}d , progress=%{public}d",
+        FIRMWARE_LOGI("SysInstallerExecutorCallback status=%{public}d, progress=%{public}d",
             firmwareComponent.status, firmwareComponent.progress);
-        if (onInstallCallback_.onFirmwareProgress == nullptr) {
+        if (self->onInstallCallback_.onFirmwareProgress == nullptr) {
             FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
             return;
         }
-        onInstallCallback_.onFirmwareProgress(firmwareComponent);
+        self->onInstallCallback_.onFirmwareProgress(firmwareComponent);
     } };
     sptr<SysInstaller::ISysInstallerCallbackFunc> cb = new SysInstallerCallback(callback);
     if (cb == nullptr) {
@@ -115,26 +121,29 @@ int32_t SysInstallerInstall::DoSysInstall(const FirmwareComponent &firmwareCompo
     FirmwareComponent sysComponent = firmwareComponent;
     InitInstallProgress();
 
-    if (InitSysInstaller(sysComponent) != OHOS_SUCCESS) {
-        FIRMWARE_LOGE("InitSysInstaller error");
+    int32_t ret = InitSysInstaller(sysComponent);
+    if (ret != OHOS_SUCCESS) {
+        FIRMWARE_LOGE("InitSysInstaller error, ret=%{public}d", ret);
         return OHOS_FAILURE;
     }
 
     int32_t updateStatus = SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateStatus(sysComponent.versionId);
     if (updateStatus != CAST_INT(SysInstaller::UpdateStatus::UPDATE_STATE_INIT)) {
-        FIRMWARE_LOGE("StartUnpack status: %{public}d , system busy", updateStatus);
+        FIRMWARE_LOGE("StartUnpack status: %{public}d, system busy", updateStatus);
         errMsg_.errorMessage = "sys installer is busy";
         errMsg_.errorCode = DUPDATE_ERR_SYSTEM_BUSY_ON_INSTALL;
         return OHOS_FAILURE;
     }
 
-    if (SetupInstallCallback(sysComponent) != OHOS_SUCCESS) {
-        FIRMWARE_LOGE("install callback setup error");
+    ret = SetupInstallCallback(sysComponent);
+    if (ret != OHOS_SUCCESS) {
+        FIRMWARE_LOGE("install callback setup error, ret=%{public}d", ret);
         return OHOS_FAILURE;
     }
 
-    if (StartUpdatePackageZip(sysComponent.versionId, sysComponent.spath) != OHOS_SUCCESS) {
-        FIRMWARE_LOGE("startUpdatePackageZip error");
+    ret = StartUpdatePackageZip(sysComponent.versionId, sysComponent.spath);
+    if (ret != OHOS_SUCCESS) {
+        FIRMWARE_LOGE("startUpdatePackageZip error, ret=%{public}d", ret);
         return OHOS_FAILURE;
     }
     return WaitInstallResult(sysComponent.versionId);
@@ -177,7 +186,7 @@ int32_t SysInstallerInstall::WaitInstallResult(const std::string &versionId)
             CAST_INT(sysInstallProgress_.status));
         return OHOS_FAILURE;
     }
-    
+
     bool isSuccess = (sysInstallProgress_.status == UpgradeStatus::INSTALL_SUCCESS &&
                       sysInstallProgress_.percent == Firmware::ONE_HUNDRED);
 

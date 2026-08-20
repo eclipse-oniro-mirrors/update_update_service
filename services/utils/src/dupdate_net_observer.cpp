@@ -54,11 +54,6 @@ void NetObserver::StartObserver()
         int32_t retryCount = 0;
         int32_t ret = NetConnResultCode::NET_CONN_SUCCESS;
         do {
-            sharedSelf = weakSelf.lock();
-            if (!sharedSelf) {
-                ENGINE_LOGE("NetObserver destroyed during retry");
-                return;
-            }
             ret = NetConnClient::GetInstance().RegisterNetConnCallback(specifier, sharedSelf.get(), 0);
             if (ret == NetConnResultCode::NET_CONN_SUCCESS) {
                 ENGINE_LOGI("StartObserver register success");

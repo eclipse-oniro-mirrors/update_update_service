@@ -18,6 +18,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -32,7 +33,7 @@ struct SysInstallerExecutorCallback {
     OnSysInstallerCallback onSysInstallerCallback;
 };
 
-class SysInstallerInstall final : public FirmwareInstall {
+class SysInstallerInstall final : public FirmwareInstall, public std::enable_shared_from_this<SysInstallerInstall> {
 private:
     bool IsComponentLegal(const std::vector<FirmwareComponent> &componentList) final;
     bool PerformInstall(const std::vector<FirmwareComponent> &componentList, UpgradeStatus &status) final;
