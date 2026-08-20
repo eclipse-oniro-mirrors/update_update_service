@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <string>
 
+#include <cinttypes>
+
 #include "hilog/log.h"
 
 namespace OHOS {

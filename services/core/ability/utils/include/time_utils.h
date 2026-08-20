@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,13 +22,17 @@
 #include <stdlib.h>
 #include <string>
 #include <time.h>
+#include <sstream>
+#include <iomanip>
 
 #include "update_log.h"
 
 namespace OHOS {
 namespace UpdateService {
 class TimeUtils {
-static constexpr int64_t BOOT_COMPLETE_SIMULATE_DURATION = 60L;           // 模拟开机广播：时间判断门限
+    static constexpr int64_t BOOT_COMPLETE_SIMULATE_DURATION = 60L; // 模拟开机广播：时间判断门限
+    static constexpr int32_t ONE_THOUSAND_MS = 1000;
+
 public:
     static int64_t GetTimestamp()
     {
@@ -38,8 +42,9 @@ public:
 
     static int64_t GetTimestampByMilliseconds()
     {
-        return std::chrono::duration_cast<std::chrono::milliseconds>
-            (std::chrono::system_clock::now().time_since_epoch()).count();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
     }
 
     static std::string GetPrintTimeStr(int64_t time)
@@ -49,7 +54,12 @@ public:
         if (tmpTm == NULL) {
             return "";
         }
-        return asctime(tmpTm);
+        char timeStr[20];
+        const size_t result = strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", tmpTm);
+        if (result == 0) {
+            return ""; // 格式化失败
+        }
+        return std::string(timeStr);
     }
 
     static int64_t GetRandTime(int32_t minTime, int32_t maxTime)

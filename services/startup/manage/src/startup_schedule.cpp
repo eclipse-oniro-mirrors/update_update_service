@@ -80,8 +80,14 @@ bool StartupSchedule::OnDemandSchedule(const std::vector<ScheduleTask> &tasks)
     for (const auto &task : tasks) {
         ENGINE_LOGI("OnDemandSchedule task %{public}s", task.ToString().c_str());
     }
-    auto isSuccess = SystemAbilityOperator().UpdateStartupPolicy(tasks);
-    ENGINE_LOGI("OnDemandSchedule %{public}s", isSuccess ? "success" : "failure");
+    bool isSuccess = SystemAbilityOperator().UpdateStartupPolicy(tasks, "awakeloopevent");
+    if (isSuccess) {
+        ENGINE_LOGI("OnDemandSchedule %{public}s", isSuccess ? "success" : "failure");
+        return isSuccess;
+    }
+
+    isSuccess = SystemAbilityOperator().UpdateStartupPolicy(tasks, "loopevent");
+    ENGINE_LOGI("OnDemandSchedule 2nd %{public}s", isSuccess ? "success" : "failure");
     return isSuccess;
 }
 } // namespace UpdateService

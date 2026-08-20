@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "network_type.h"
 #include "startup_constant.h"
 #include "update_define.h"
 
@@ -29,7 +30,7 @@ public:
     TaskPriority priority = TaskPriority::LOW;
     uint64_t minDelayTime = 0L;  // 单位S
     uint64_t maxDelayTime = 0L;  // 单位S
-    int netType = 0;
+    NetType netType = NetType::NO_NET;
     int batteryLevel = 0;
     bool deviceIdle = false;
     std::string taskExtra;
@@ -55,13 +56,18 @@ public:
                taskExtra == other.taskExtra;
     }
 
+    bool IsValidNetTask() const
+    {
+        return netType != NetType::NO_NET;
+    }
+
     std::string ToString() const
     {
         return std::string("Task:[")
                 .append("priority:").append(std::to_string(CAST_INT(priority))).append(", ")
                 .append("minDelayTime:").append(std::to_string(minDelayTime)).append(", ")
                 .append("maxDelayTime:").append(std::to_string(maxDelayTime)).append(", ")
-                .append("netType:").append(std::to_string(netType)).append(", ")
+                .append("netType:").append(std::to_string(CAST_INT(netType))).append(", ")
                 .append("batteryLevel:").append(std::to_string(batteryLevel)).append(", ")
                 .append("deviceIdle:").append(std::to_string(CAST_INT(deviceIdle))).append(", ")
                 .append("taskExtra:").append(taskExtra)

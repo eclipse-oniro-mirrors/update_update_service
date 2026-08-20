@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,19 +18,24 @@
 #include <cstdlib>
 #include <thread>
 
+#include "bell_utils.h"
 #include "config_parse.h"
+#include "download_task_manager.h"
 #include "dupdate_errno.h"
 #include "dupdate_upgrade_helper.h"
+#include "firmware_night_upgrade_alarm_manager.h"
 #ifdef NETMANAGER_BASE_ENABLE
 #include "dupdate_net_manager.h"
 #endif
 #include "file_utils.h"
+#include "firmware_auto_upgrade_alarm_manager.h"
 #include "firmware_callback_utils.h"
 #include "firmware_changelog_utils.h"
 #include "firmware_common.h"
 #include "firmware_constant.h"
 #include "firmware_database.h"
 #include "firmware_event_listener.h"
+#include "firmware_event_manager.h"
 #include "firmware_flow_manager.h"
 #include "firmware_iexecute_mode.h"
 #include "firmware_log.h"
@@ -41,7 +46,6 @@
 #include "firmware_status_cache.h"
 #include "firmware_task_operator.h"
 #include "firmware_update_helper.h"
-#include "progress_thread.h"
 #include "schedule_task.h"
 #include "startup_schedule.h"
 #include "string_utils.h"
@@ -52,6 +56,7 @@ namespace UpdateService {
 constexpr int32_t INIT_DELAY_TIME = 5; // 进程启动延时时间5秒，为了安装重启之后可以看到版本号及时刷新
 constexpr int32_t PROCESS_EXIT_DELAY_TIME = 1; // 进程退出等待时间，单位：秒
 constexpr uint64_t PULLUP_AFTER_TERMINATE_INTERVAL = 5; // 终止升级后SA拉起间隔
+constexpr int64_t MIN_SCHEDULE_TIME = 0L;
 
 FirmwareManager::FirmwareManager() {}
 
@@ -84,22 +89,36 @@ void FirmwareManager::DelayInit(StartupReason startupReason)
 {
     FIRMWARE_LOGI("FirmwareManager DelayInit startupReason %{public}d", startupReason);
     RestoreUpdate();
-    DelayedSingleton<FirmwareEventListener>::GetInstance()->RegisterNetChangedListener();
+    RegisterAllListeners();
 
     auto eventType = CommonEventType::PROCESS_INIT;
     if (startupReason == StartupReason::DEVICE_REBOOT) {
         // 重启启动，延时5秒，等待系统初始化完再恢复周期提醒alarm | 执行升级结果判断  避免出现通知hap拉不起的问题
         sleep(INIT_DELAY_TIME);
         eventType = CommonEventType::BOOT_COMPLETE;
+        if (BellUtils::IsSupported() &&
+            preferencesUtil_->ObtainBool(Firmware::RESTORE_BOOT_ANIMATION_SOUND, false)) {
+            BellUtils::TurnOnBell();
+            // 恢复后清除标记，防止普通启动重复修改铃声状态。
+            if (!preferencesUtil_->Remove(Firmware::RESTORE_BOOT_ANIMATION_SOUND)) {
+                FIRMWARE_LOGE("Remove boot animation sound restore flag failed");
+            }
+            FIRMWARE_LOGI("Restore boot animation sound after night upgrade reboot");
+        }
     }
 
     // 以下两种情况会向OUC发送初始启动消息：
     // 1. DUE启动原因为StartupReason::PROCESS_ENV_RESET，DUE缓存数据清空
     // 2. DUE首次启动，还未向OUC发送过初始启动消息
     NotifyInitEvent();
-
     // 处理 设备重启/进程初始化 事件
-    HandleEvent(eventType);
+    DelayedSingleton<FirmwareEventManager>::GetInstance()->HandleEvent(eventType);
+}
+
+void FirmwareManager::RegisterAllListeners()
+{
+    DelayedSingleton<FirmwareEventListener>::GetInstance()->RegisterNetChangedListener();
+    FirmwareAutoUpgradeAlarmManager::GetInstance()->RefreshAutoUpgradeAlarm();
 }
 
 void FirmwareManager::RestoreUpdate()
@@ -107,10 +126,6 @@ void FirmwareManager::RestoreUpdate()
     FirmwareTask firmwareTask;
     FirmwareTaskOperator().QueryTask(firmwareTask);
     FIRMWARE_LOGI("RestoreUpdate status: %{public}d", firmwareTask.status);
-    if (firmwareTask.status == UpgradeStatus::DOWNLOAD_PAUSE) {
-        HandleBootDownloadPauseStatusProcess(firmwareTask);
-        return;
-    }
     if (firmwareTask.status == UpgradeStatus::DOWNLOADING) {
         HandleBootDownloadOnStatusProcess(firmwareTask);
         return;
@@ -135,15 +150,27 @@ bool FirmwareManager::IsIdle()
 
     FirmwareTask task;
     FirmwareTaskOperator().QueryTask(task);
-    bool isIdle = !task.isExistTask;
-    FIRMWARE_LOGI("FirmwareManager IsIdle:%{public}s", StringUtils::GetBoolStr(isIdle).c_str());
-    return isIdle;
+    // 没有任务，空闲状态
+    if (!task.isExistTask) {
+        FIRMWARE_LOGD("IsTaskIdle true, no task");
+        return true;
+    }
+    if (CAST_INT(task.status) > CAST_INT(UpgradeStatus::CHECK_VERSION_SUCCESS)) {
+        FIRMWARE_LOGD("IsTaskIdle false, task status %{public}d", CAST_INT(task.status));
+        return false;
+    }
+    FIRMWARE_LOGI("FirmwareManager IsIdle true");
+    return true;
 }
 
 std::vector<ScheduleTask> FirmwareManager::GetScheduleTasks()
 {
-    ScheduleTask scheduleTask;
-    return {scheduleTask};
+    std::vector<ScheduleTask> tasks;
+    ScheduleTask scheduleAutoUpgradeTask = GetAutoUpgradeScheduleTask();
+    if (!scheduleAutoUpgradeTask.taskExtra.empty()) {
+        tasks.emplace_back(scheduleAutoUpgradeTask);
+    }
+    return tasks;
 }
 
 bool FirmwareManager::Exit()
@@ -156,14 +183,42 @@ void FirmwareManager::DoCancel(BusinessError &businessError)
 {
     FirmwareTask task;
     FirmwareTaskOperator().QueryTask(task);
+    FIRMWARE_LOGI("DoCancelDownload task status: %{public}d", CAST_INT(task.status));
     if (!task.isExistTask) {
         FIRMWARE_LOGI("DoCancel no task");
         businessError.Build(CallResult::FAIL, "no download task to cancel!");
         businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR), "no download task to cancel!");
         return;
     }
-    ProgressThread::isCancel_.store(true);
-    return;
+
+    if (task.status != UpgradeStatus::DOWNLOADING && task.status != UpgradeStatus::DOWNLOAD_SUCCESS &&
+        task.status != UpgradeStatus::DOWNLOAD_PAUSE) {
+        businessError.Build(CallResult::FAIL, "download task status invalid");
+        businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR), "download task status invalid!");
+        return;
+    }
+
+    if (task.status == UpgradeStatus::DOWNLOADING) {
+        DownloadError downloadError;
+        DownloadTaskManager::GetInstance()->Cancel(task.downloadTaskId, downloadError, true);
+        FIRMWARE_LOGI("DoCancelDownload, endReason = %{public}d", CAST_INT(downloadError.endReason));
+        if (downloadError.errorNum != DownloadCallResult::SUCCESS) {
+            FIRMWARE_LOGE("FirmwareManager::DoCancelDownload cancel error");
+            businessError.Build(CallResult::FAIL, "cancel download error!");
+            businessError.AddErrorMessage(CAST_INT(downloadError.endReason), "cancel download error!");
+        }
+    }
+    FirmwareTaskOperator().UpdateProgressByTaskId(task.taskId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
+
+    std::vector<FirmwareComponent> components;
+    FirmwareComponentOperator componentOperator;
+    componentOperator.QueryAll(components);
+    for (const auto &component : components) {
+        componentOperator.UpdateProgressByVersionId(component.versionId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
+    }
+
+    DownloadError downloadError;
+    DownloadTaskManager::GetInstance()->RemoveTask(task.downloadTaskId, downloadError);
 }
 
 void FirmwareManager::DoTerminateUpgrade(BusinessError &businessError)
@@ -263,7 +318,7 @@ void FirmwareManager::DoInstall(const UpgradeOptions &upgradeOptions, BusinessEr
 void FirmwareManager::DoAutoDownloadSwitchChanged(bool isDownloadSwitchOn)
 {
     FIRMWARE_LOGI("DoAutoDownloadSwitchChanged isDownloadSwitchOn %{public}s", isDownloadSwitchOn ? "on" : "off");
-    preferencesUtil_->SaveBool(Firmware::AUTO_DOWNLOAD_SWITCH, isDownloadSwitchOn);
+    preferencesUtil_->SaveAutoDownloadSwitch(isDownloadSwitchOn);
     FirmwareTask task;
     FirmwareTaskOperator().QueryTask(task);
     if (!task.isExistTask) {
@@ -282,6 +337,27 @@ void FirmwareManager::DoAutoDownloadSwitchChanged(bool isDownloadSwitchOn)
     }
 }
 
+void FirmwareManager::DoAutoUpgradeSwitchChanged(bool isNightUpgradeSwitchOn)
+{
+    FIRMWARE_LOGI("DoAutoUpgradeSwitchChanged isDownloadSwitchOn %{public}s", isNightUpgradeSwitchOn ? "on" : "off");
+    preferencesUtil_->SaveNightUpgradeSwitch(isNightUpgradeSwitchOn);
+    FirmwareTask task;
+    FirmwareTaskOperator().QueryTask(task);
+    if (!task.isExistTask) {
+        FIRMWARE_LOGI("DoAutoDownloadSwitchChanged no task");
+        return;
+    }
+    if (!isNightUpgradeSwitchOn) {
+        FirmwareNightUpgradeAlarmManager::GetInstance()->CancelNightUpgradeAlarm();
+        return;
+    }
+
+    if (task.status == UpgradeStatus::DOWNLOAD_SUCCESS) {
+        FirmwareCallbackUtils::GetInstance()->NotifyEvent(task.taskId, EventId::EVENT_UPGRADE_WAIT, task.status);
+        FirmwareNightUpgradeAlarmManager::GetInstance()->SetNightUpgradeAlarm();
+    }
+}
+
 void FirmwareManager::DoClearError(BusinessError &businessError)
 {
     FirmwareTask task;
@@ -296,159 +372,6 @@ void FirmwareManager::DoClearError(BusinessError &businessError)
             "please check status before clear error");
         return;
     }
-    FirmwareUpdateHelper::ClearFirmwareInfo();
-}
-
-void FirmwareManager::HandleEvent(CommonEventType event)
-{
-    FIRMWARE_LOGI("handleEvent event %{public}d", static_cast<uint32_t>(event));
-    switch (event) {
-        case CommonEventType::NET_CHANGED:
-            HandleNetChanged();
-            break;
-        case CommonEventType::BOOT_COMPLETE:
-            HandleBootComplete();
-            break;
-        default:
-            break;
-    }
-}
-
-void FirmwareManager::HandleBootComplete()
-{
-    FIRMWARE_LOGI("HandleBootComplete");
-    FirmwareTask task;
-    FirmwareTaskOperator().QueryTask(task);
-    if (!task.isExistTask) {
-        FIRMWARE_LOGI("HandleBootComplete has no task");
-        return;
-    }
-
-    FIRMWARE_LOGI("HandleBootComplete status %{public}d", CAST_INT(task.status));
-    if (task.status == UpgradeStatus::UPDATING) {
-        HandleBootUpdateOnStatusProcess(task);
-        return;
-    }
-
-    // ab 升级安装完成
-    if (task.status == UpgradeStatus::INSTALL_SUCCESS) {
-        HandleBootUpdateSuccess(task);
-        return;
-    }
-}
-
-void FirmwareManager::HandleNetChanged()
-{
-    FIRMWARE_LOGI("HandleNetChanged");
-    #ifdef NETMANAGER_BASE_ENABLE
-    if (!DelayedSingleton<NetManager>::GetInstance()->IsNetAvailable()) {
-        FIRMWARE_LOGE("HandleNetChanged network not available.");
-        ProgressThread::isNoNet_.store(true);
-        return;
-    }
-
-    ProgressThread::isNoNet_.store(false);
-    FirmwareTask task;
-    FirmwareTaskOperator().QueryTask(task);
-    FIRMWARE_LOGI("HandleNetChanged status %{public}d", task.status);
-
-    if (!DelayedSingleton<NetManager>::GetInstance()->IsNetAvailable(NetType::NOT_METERED_WIFI)) {
-        return;
-    }
-
-    if (task.status == UpgradeStatus::DOWNLOAD_PAUSE) {
-        HandleResumeDownload(task);
-        return;
-    }
-
-    if (task.status == UpgradeStatus::CHECK_VERSION_SUCCESS) {
-        bool isDownloadSwitchOn = preferencesUtil_->ObtainBool(Firmware::AUTO_DOWNLOAD_SWITCH, false);
-        FIRMWARE_LOGI("HandleNetChanged isDownloadSwitchOn %{public}s",
-            StringUtils::GetBoolStr(isDownloadSwitchOn).c_str());
-        if (isDownloadSwitchOn) {
-            DoAutoDownload(task);
-        }
-    }
-    #endif
-}
-
-// updater调用后正常启动
-void FirmwareManager::HandleBootUpdateOnStatusProcess(const FirmwareTask &task)
-{
-    FIRMWARE_LOGI("HandleBootUpdateOnStatusProcess");
-    FirmwareResultProcess resultProcess;
-    std::map<std::string, UpdateResult> resultMap;
-    std::vector<FirmwareComponent> components;
-    FirmwareComponentOperator().QueryAll(components);
-    switch (resultProcess.GetUpdaterResult(components, resultMap)) {
-        case UpdateResultCode::SUCCESS:
-            HandleBootUpdateSuccess(task);
-            break;
-        case UpdateResultCode::FAILURE:
-            HandleBootUpdateFail(task, resultMap);
-            break;
-        default:
-            break;
-    }
-}
-
-void FirmwareManager::HandleBootUpdateSuccess(const FirmwareTask &task)
-{
-    preferencesUtil_->SaveString(Firmware::UPDATE_ACTION, "upgrade");
-    std::vector<FirmwareComponent> components;
-    FirmwareComponentOperator().QueryAll(components);
-    std::vector<VersionComponent> versionComponents;
-    for (const auto &component : components) {
-        VersionComponent versionComponent;
-        versionComponent.componentType = CAST_INT(ComponentType::OTA);
-        versionComponent.componentId = component.componentId;
-        versionComponent.upgradeAction = UpgradeAction::UPGRADE;
-        versionComponent.displayVersion = component.targetBlDisplayVersionNumber;
-        versionComponent.innerVersion = component.targetBlVersionNumber;
-        versionComponent.componentExtra = JsonBuilder().Append("{}").ToJson();
-        versionComponents.push_back(versionComponent);
-    }
-
-    DelayedSingleton<FirmwareChangelogUtils>::GetInstance()->SaveHotaCurrentVersionComponentId();
-    if (task.combinationType == CombinationType::HOTA) {
-        FIRMWARE_LOGI("notify upgrade success");
-        DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(task.taskId, EventId::EVENT_UPGRADE_SUCCESS,
-            UpgradeStatus::UPDATE_SUCCESS, ErrorMessage{}, versionComponents);
-        FirmwareUpdateHelper::ClearFirmwareInfo();
-        return;
-    }
-}
-
-void FirmwareManager::HandleBootUpdateFail(const FirmwareTask &task,
-    const std::map<std::string, UpdateResult> &resultMap)
-{
-    preferencesUtil_->SaveString(Firmware::UPDATE_ACTION, "recovery");
-    std::vector<FirmwareComponent> components;
-    FirmwareComponentOperator().QueryAll(components);
-    std::vector<VersionComponent> versionComponents;
-    for (const auto &component : components) {
-        VersionComponent versionComponent;
-        versionComponent.componentType = CAST_INT(ComponentType::OTA);
-        versionComponent.componentId = component.componentId;
-        versionComponent.upgradeAction = UpgradeAction::UPGRADE;
-        versionComponent.displayVersion = component.targetBlDisplayVersionNumber;
-        versionComponent.innerVersion = component.targetBlVersionNumber;
-        versionComponent.componentExtra = JsonBuilder().Append("{}").ToJson();
-        versionComponents.push_back(versionComponent);
-    }
-
-    ErrorMessage errorMessage;
-    for (const auto &result : resultMap) {
-        if (result.second.result == UPDATER_RESULT_FAILURE) {
-            errorMessage.errorCode = CAST_INT(result.second.GetUpdateResultCode());
-            errorMessage.errorMessage = result.second.reason;
-            break;
-        }
-    }
-
-    DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(task.taskId, EventId::EVENT_UPGRADE_FAIL,
-        UpgradeStatus::UPDATE_FAIL, errorMessage, versionComponents);
-    FIRMWARE_LOGI("upgrade fail");
     FirmwareUpdateHelper::ClearFirmwareInfo();
 }
 
@@ -485,29 +408,17 @@ void FirmwareManager::HandleBootInstallOnStatusProcess(FirmwareTask &task)
 
 void FirmwareManager::HandleBootDownloadOnStatusProcess(FirmwareTask &task)
 {
-    // 下载中重启，清除记录和数据
-    FIRMWARE_LOGI("HandleBootDownloadOnStatusProcess ClearFirmwareInfo");
-    FirmwareUpdateHelper::ClearFirmwareInfo();
-}
-
-void FirmwareManager::HandleBootDownloadPauseStatusProcess(FirmwareTask &task)
-{
-    FirmwareUpdateHelper::ClearFirmwareInfo();
-}
-
-void FirmwareManager::HandleResumeDownload(FirmwareTask &task)
-{
-    FIRMWARE_LOGI("HandleResumeDownload");
+    // 下载中重启 任务状态修改为暂停
+    FIRMWARE_LOGI("HandleBootDownloadOnStatusProcess update task paused");
+    FirmwareTaskOperator().UpdateStatusByTaskId(task.taskId, UpgradeStatus::DOWNLOAD_PAUSE);
 }
 
 void FirmwareManager::HandleBootDownloadedStatusProcess(FirmwareTask &task)
 {
+    if (preferencesUtil_->GetNightUpgradeSwitch()) {
+        FirmwareNightUpgradeAlarmManager::GetInstance()->SetNightUpgradeAlarm();
+    }
     FIRMWARE_LOGI("HandleBootDownloadedStatusProcess");
-}
-
-void FirmwareManager::DoAutoDownload(const FirmwareTask &task)
-{
-    FIRMWARE_LOGI("DoAutoDownload");
 }
 
 void FirmwareManager::NotifyInitEvent()
@@ -519,6 +430,29 @@ void FirmwareManager::NotifyInitEvent()
         DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent("", EventId::EVENT_INITIALIZE,
             UpgradeStatus::INIT);
     }
+}
+
+ScheduleTask FirmwareManager::GetAutoUpgradeScheduleTask()
+{
+    ScheduleTask scheduleTask;
+    const int64_t autoUpgradeTime = FirmwareAutoUpgradeAlarmManager::GetInstance()->GetAutoUpgradeTime();
+    const int64_t autoUpgradeDuration =
+        FirmwareAutoUpgradeAlarmManager::GetInstance()->GetEffectiveAutoUpgradeDuration();
+    const auto &timestamp = TimeUtils::GetTimestamp();
+    FIRMWARE_LOGI(
+        "GetAutoUpgradeScheduleTask autoUpgradeTime %{public}s, currentTime: %{public}s autoUpgradeDuration %{public}s",
+        TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str(), TimeUtils::GetPrintTimeStr(timestamp).c_str(),
+        std::to_string(autoUpgradeDuration).c_str());
+    // 时间小于0，说明因为无网还未搜过包，不创建时间Task
+    if (autoUpgradeTime <= 0) {
+        return scheduleTask;
+    }
+
+    // 创建需要等待时间的task
+    const int64_t minDelayTime = std::max(MIN_SCHEDULE_TIME, autoUpgradeTime - timestamp);
+    scheduleTask.minDelayTime = static_cast<uint64_t>(std::min(minDelayTime, autoUpgradeDuration));
+    scheduleTask.taskExtra = "Firmware Auto Upgrade";
+    return scheduleTask;
 }
 } // namespace UpdateService
 } // namespace OHOS

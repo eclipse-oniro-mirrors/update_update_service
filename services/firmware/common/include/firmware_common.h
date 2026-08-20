@@ -23,6 +23,8 @@
 #include "firmware_component.h"
 #include "firmware_log.h"
 #include "update_define.h"
+#include "download_common.h"
+#include "progress.h"
 
 namespace OHOS {
 namespace UpdateService {
@@ -147,24 +149,24 @@ enum class RequestType {
     AUTH
 };
 
-enum class DownloadEndReason {
-    INIT = 0,
-    SUCCESS = 1,
-    DOWNLOADING = 2,
-    FAIL = 3,
-    VERIFY_FAIL = 4,
-    IO_EXCEPTION = 5,
-    REDIRECT = 6,
-    SERVER_TIMEOUT = 7,
-    PAUSE = 8,
-    CANCEL = 9,
-    NO_ENOUGH_MEMORY = 10,
-    NET_NOT_AVAILIABLE,
-    DOWNLAOD_INFO_EMPTY,
-    CURL_ERROR,
-    SYSTEM_BUSY,
-    INIT_PACKAGE_FAIL,
-    NET_CHANGE,
+struct FirmwareDownloadProgress {
+    std::string versionId;
+    int64_t startTime = 0;
+    int64_t endTime = 0;
+    int64_t effectiveTime = 0;
+    Progress progress;
+    DownloadErrorInfo downloadErrorInfo;
+    std::string downloadUrl;
+    int64_t packageSize = 0;
+    int64_t downloadedSize = 0;
+    int64_t verifiedSize = 0;
+    bool isCombineVerifyProgress = false;
+};
+
+struct FirmwareDownloadCallbackInfo {
+    std::string downloadTaskId;
+    Progress taskProgress;
+    std::vector<FirmwareDownloadProgress> progressList;
 };
 } // namespace UpdateService
 } // namespace OHOS

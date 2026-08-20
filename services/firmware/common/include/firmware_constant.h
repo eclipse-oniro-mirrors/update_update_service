@@ -39,6 +39,7 @@ static const std::string ENCRYPTED_ROOT_PATH = Constant::FILES_ROOT_PATH + "/fir
 static const std::string CHANGELOG_PATH = ENCRYPTED_ROOT_PATH + "/changelogs";
 
 static const std::string AUTO_DOWNLOAD_SWITCH = "auto_download_switch"; // 自动下载开关
+static const std::string RESTORE_BOOT_ANIMATION_SOUND = "restore_boot_animation_sound";
 
 constexpr float COMPRESSION_RATIO = 0.2;
 

@@ -18,6 +18,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <stdlib.h>
 #include <string>
 
@@ -62,6 +63,34 @@ public:
             result = sequence + ENCRYPT_STR;
         } else {
             result = ENCRYPT_STR;
+        }
+        return result;
+    }
+
+    static std::string GetPrintFilePathStr(const std::string &str)
+    {
+        std::filesystem::path p(str);
+        std::string lastPart = p.filename().string();
+        std::string parentPath = p.parent_path().string();
+        std::string printDir = ReplacePercentageWithAsterisks(lastPart);
+        return parentPath + "/" + printDir;
+    }
+
+private:
+    static std::string ReplacePercentageWithAsterisks(const std::string &str)
+    {
+        const double percentage = 30.0;
+        const double oneHundred = 100.0;
+        int32_t replaceCount = static_cast<int32_t>(str.length() * percentage / oneHundred);
+        std::string result = str;
+        int32_t index = static_cast<int32_t>(result.length()) - replaceCount;
+        if (index < 0) {
+            return result;
+        }
+        for (int32_t i = 0; i < static_cast<int32_t>(result.length()); ++i) {
+            if (i >= index) {
+                result[i] = '*';
+            }
         }
         return result;
     }

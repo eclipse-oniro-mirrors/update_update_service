@@ -32,14 +32,13 @@ public:
     bool IdleCheck();
     bool Exit();
 
-private:
-    bool TaskManage(ScheduleTask &scheduleTask);
-    bool TaskSchedule(const ScheduleTask &scheduleTask);
+    bool TaskManage(std::vector<ScheduleTask> &scheduleTasks);
+    bool TaskSchedule(const std::vector<ScheduleTask> &scheduleTasks);
 
 private:
     std::shared_ptr<IAccessManager> accessManager_ = nullptr;
     std::shared_ptr<IStartupSchedule> startupSchedule_ = nullptr;
-    ScheduleTask scheduleTask_;
+    std::vector<ScheduleTask> scheduleTask_;
 };
 } // namespace UpdateService
 } // namespace OHOS
