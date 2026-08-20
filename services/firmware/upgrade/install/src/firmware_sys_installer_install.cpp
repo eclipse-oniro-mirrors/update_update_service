@@ -73,30 +73,32 @@ int32_t SysInstallerInstall::InitSysInstaller(const FirmwareComponent &firmwareC
 int32_t SysInstallerInstall::SetupInstallCallback(FirmwareComponent firmwareComponent)
 {
     std::weak_ptr<SysInstallerInstall> weakThis = weak_from_this();
-    SysInstallerExecutorCallback callback { [weakThis, firmwareComponent](const InstallProgress &installProgress) mutable {
-        auto self = weakThis.lock();
-        if (!self) {
-            FIRMWARE_LOGE("SysInstallerInstall has been destroyed, skip callback");
-            return;
-        }
-        {
-            std::lock_guard<std::mutex> lock(self->installMutex_);
-            self->sysInstallProgress_ = installProgress.progress;
-            self->errMsg_ = installProgress.errMsg;
-            self->resultReady_.store(true);
-        }
+    SysInstallerExecutorCallback callback {
+        [weakThis, firmwareComponent](const InstallProgress &installProgress) mutable {
+            auto self = weakThis.lock();
+            if (!self) {
+                FIRMWARE_LOGE("SysInstallerInstall has been destroyed, skip callback");
+                return;
+            }
+            {
+                std::lock_guard<std::mutex> lock(self->installMutex_);
+                self->sysInstallProgress_ = installProgress.progress;
+                self->errMsg_ = installProgress.errMsg;
+                self->resultReady_.store(true);
+            }
 
-        self->installCond_.notify_one();
-        firmwareComponent.status = installProgress.progress.status;
-        firmwareComponent.progress = installProgress.progress.percent;
-        FIRMWARE_LOGI("SysInstallerExecutorCallback status=%{public}d, progress=%{public}d",
-            firmwareComponent.status, firmwareComponent.progress);
-        if (self->onInstallCallback_.onFirmwareProgress == nullptr) {
-            FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
-            return;
+            self->installCond_.notify_one();
+            firmwareComponent.status = installProgress.progress.status;
+            firmwareComponent.progress = installProgress.progress.percent;
+            FIRMWARE_LOGI("SysInstallerExecutorCallback status=%{public}d, progress=%{public}d",
+                firmwareComponent.status, firmwareComponent.progress);
+            if (self->onInstallCallback_.onFirmwareProgress == nullptr) {
+                FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
+                return;
+            }
+            self->onInstallCallback_.onFirmwareProgress(firmwareComponent);
         }
-        self->onInstallCallback_.onFirmwareProgress(firmwareComponent);
-    } };
+    };
     sptr<SysInstaller::ISysInstallerCallbackFunc> cb = new SysInstallerCallback(callback);
     if (cb == nullptr) {
         FIRMWARE_LOGE("sys installer callback is nullptr");
