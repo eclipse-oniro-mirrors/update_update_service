@@ -16,6 +16,10 @@
 #ifndef FIRMWARE_SYS_INSTALLER_INSTALL_H
 #define FIRMWARE_SYS_INSTALLER_INSTALL_H
 
+#include <chrono>
+#include <condition_variable>
+#include <memory>
+#include <mutex>
 #include <string>
 
 #include "firmware_component.h"
@@ -29,7 +33,7 @@ struct SysInstallerExecutorCallback {
     OnSysInstallerCallback onSysInstallerCallback;
 };
 
-class SysInstallerInstall final : public FirmwareInstall {
+class SysInstallerInstall final : public FirmwareInstall, public std::enable_shared_from_this<SysInstallerInstall> {
 private:
     bool IsComponentLegal(const std::vector<FirmwareComponent> &componentList) final;
     bool PerformInstall(const std::vector<FirmwareComponent> &componentList, UpgradeStatus &status) final;
@@ -37,9 +41,14 @@ private:
     int32_t DoSysInstall(const FirmwareComponent &firmwareComponent);
     void InitInstallProgress();
     int32_t WaitInstallResult(const std::string &versionId);
+    int32_t InitSysInstaller(const FirmwareComponent &firmwareComponent);
+    int32_t SetupInstallCallback(FirmwareComponent firmwareComponent);
 
 private:
     Progress sysInstallProgress_;
+    std::mutex installMutex_;
+    std::condition_variable installCond_;
+    std::atomic<bool> resultReady_ { false };
 };
 } // namespace UpdateService
 } // namespace OHOS

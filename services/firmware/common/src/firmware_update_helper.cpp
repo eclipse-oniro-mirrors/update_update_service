@@ -73,18 +73,18 @@ VersionComponent FirmwareUpdateHelper::BuildHotaVersionComponent(std::vector<Fir
     hotaVersionComponent.componentId = hotaComponents[0].componentId;
     hotaVersionComponent.upgradeAction = UpgradeAction::UPGRADE;
     hotaVersionComponent.componentType = CAST_INT(ComponentType::OTA);
-    InstallType InstallType = FirmwareUpdateHelper::GetInstallType();
+    InstallType installType = FirmwareUpdateHelper::GetInstallType();
     size_t effectiveMode;
-    if (InstallType == InstallType::SYS_INSTALLER || InstallType == InstallType::STREAM_INSTALLLER) {
+    if (installType == InstallType::SYS_INSTALLER || installType == InstallType::STREAM_INSTALLLER) {
         effectiveMode = static_cast<size_t>(EffectiveMode::LIVE_AND_COLD);
     } else {
         effectiveMode = static_cast<size_t>(EffectiveMode::COLD);
     }
     hotaVersionComponent.effectiveMode = effectiveMode;
     size_t otaMode;
-    if (InstallType == InstallType::SYS_INSTALLER) {
+    if (installType == InstallType::SYS_INSTALLER) {
         otaMode = static_cast<size_t>(OtaMode::AB_REGULAR_OTA);
-    } else if (InstallType == InstallType::STREAM_INSTALLLER) {
+    } else if (installType == InstallType::STREAM_INSTALLLER) {
         otaMode = static_cast<size_t>(OtaMode::AB_STREAM_OTA);
     } else {
         otaMode = static_cast<size_t>(OtaMode::REGULAR_OTA);

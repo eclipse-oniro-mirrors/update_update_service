@@ -147,7 +147,6 @@ bool FileUtils::CreateMultiDirWithPermission(const std::string &fileDir, int32_t
 std::string FileUtils::GetParentDir(const std::string &fileDir)
 {
     auto curDir = std::filesystem::path(fileDir);
-    ENGINE_LOGI("dirPath = %s", curDir.parent_path().string().c_str());
     return curDir.parent_path().string();
 }
 

@@ -55,8 +55,8 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
         });
     std::unique_lock<std::mutex> lock(checkNewVersionMutex_);
     constexpr int32_t waitTime = 40;
-    conditionVariable_.wait_for(lock, std::chrono::seconds(waitTime), [&] { return checkComplete_; });
-    if (!checkComplete_) {
+    if (!conditionVariable_.wait_for(lock, std::chrono::seconds(waitTime),
+        [this] { return checkComplete_.load(); })) {
         FIRMWARE_LOGE("CheckNewVersion is time out");
         businessError.errorNum = CallResult::TIME_OUT;
         businessError.message = "CheckNewVersion TimeOut";

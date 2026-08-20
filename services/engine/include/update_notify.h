@@ -23,14 +23,12 @@
 #include "ability_connect_callback_interface.h"
 #include "ability_manager_interface.h"
 #include "ability_manager_client.h"
-#include "if_system_ability_manager.h"
 #include "i_update_notify.h"
-#include "system_ability_definition.h"
-#include "update_no_constructor.h"
 #include "want.h"
 
 namespace OHOS {
 namespace UpdateService {
+class NotifyConnection;
 class UpdateNotify : public IRemoteStub<IUpdateNotify> {
 public:
     DISALLOW_COPY_AND_MOVE(UpdateNotify);
@@ -39,7 +37,8 @@ public:
     ~UpdateNotify();
     static sptr<UpdateNotify> GetInstance();
     bool ConnectToAppService(const std::string &eventInfo, const std::string &subscribeInfo);
-    void HandleAbilityConnect(const sptr<IRemoteObject> &remoteObject);
+    bool ConnectAbility(const sptr<NotifyConnection> &connect);
+    sptr<IRemoteObject> GetRemoteConnectObj();
 
 private:
     bool HandleMessage(const std::string &message);
@@ -49,9 +48,8 @@ private:
 private:
     static std::mutex instanceLock_;
     static sptr<UpdateNotify> instance_;
-    sptr<IRemoteObject> remoteObject_ = nullptr;
-    std::mutex connectMutex_;
-    std::condition_variable  conditionVal_;
+    std::mutex connectLock_;
+    sptr<NotifyConnection> connectionStub_ = nullptr;
 
     enum class UpdateAppCode {
         UNKNOWN = 0,
@@ -61,14 +59,19 @@ private:
 
 class NotifyConnection : public AAFwk::AbilityConnectionStub {
 public:
-    explicit NotifyConnection(const sptr<UpdateNotify> &instance);
-    ~NotifyConnection() = default;
+    explicit NotifyConnection() = default;
+    ~NotifyConnection() override = default;
+    sptr<IRemoteObject> GetRemoteObj();
+    bool IsConnected();
+
     void OnAbilityConnectDone(const AppExecFwk::ElementName &element, const sptr<IRemoteObject> &remoteObject,
         int32_t resultCode) override;
     void OnAbilityDisconnectDone(const AppExecFwk::ElementName &element, int resultCode) override;
 
 private:
-    sptr<UpdateNotify> instance_ = nullptr;
+    sptr<IRemoteObject> remoteObject_ = nullptr;
+    std::mutex connectMutex_;
+    std::condition_variable conditionVar_;
 };
 } // namespace UpdateService
 } // namespace OHOS

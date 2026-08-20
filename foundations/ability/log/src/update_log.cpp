@@ -27,7 +27,7 @@ bool UpdateLog::JudgeLevel(const UpdateLogLevel &level)
     if (level <= curLevel) {
         return true;
     }
-    return true;
+    return false;
 }
 
 void UpdateLog::SetLogLevel(const UpdateLogLevel &level)

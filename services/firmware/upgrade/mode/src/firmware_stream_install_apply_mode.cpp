@@ -95,7 +95,7 @@ bool FirmwareStreamInstallApplyMode::IsAllowInstall()
     if (installType_ != InstallType::STREAM_INSTALLLER) {
         FIRMWARE_LOGE("IsAllowInstall stream is not support");
         businessError_.Build(CallResult::FAIL, "install condition fail!");
-        businessError_.AddErrorMessage(CAST_INT(DUPDATE_ERR_LOW_BATTERY_LEVEL), "battery is low");
+        businessError_.AddErrorMessage(CAST_INT(DUPDATE_ERR_INPUT_PARA_ERROR), "install type error");
         return false;
     }
     if (!DelayedSingleton<NetManager>::GetInstance()->IsNetAvailable()) {
@@ -122,6 +122,10 @@ FirmwareStep FirmwareStreamInstallApplyMode::GetStepAfterInstall()
     FIRMWARE_LOGI("FirmwareStreamInstallApplyMode installOptions %{public}d", CAST_INT(upgradeOptions_.order));
     if (installStepDataProcessor_.HasInstallFail()) {
         FirmwareUpdateHelper::ClearFirmwareInfo();
+    }
+
+    if (installStepDataProcessor_.HasInstallSuccess() && upgradeOptions_.order == Order::INSTALL_AND_APPLY) {
+        return FirmwareStep::APPLY_STEP;
     }
 
     return FirmwareStep::COMPLETE;

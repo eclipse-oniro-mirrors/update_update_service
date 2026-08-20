@@ -59,7 +59,7 @@ bool SqliteDb::DeleteDbStore()
     std::lock_guard<std::mutex> lockGuard(dbMutex_);
     int ret = NativeRdb::RdbHelper::DeleteRdbStore(GetDbStoreDir());
     dbStore_ = nullptr;
-    ENGINE_LOGE("SqliteDb DeleteDbStore ret=%{public}d", ret);
+    ENGINE_LOGI("SqliteDb DeleteDbStore ret=%{public}d", ret);
     return ret == NativeRdb::E_OK;
 }
 

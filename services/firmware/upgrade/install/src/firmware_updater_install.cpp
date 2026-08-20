@@ -37,7 +37,10 @@ bool UpdaterInstall::IsComponentLegal(const std::vector<FirmwareComponent> &comp
 
 bool UpdaterInstall::PerformInstall(const std::vector<FirmwareComponent> &componentList, UpgradeStatus &status)
 {
-    onInstallCallback_.onFirmwareStatus(UpgradeStatus::UPDATING);
+    if (onInstallCallback_.onFirmwareStatus != nullptr) {
+        onInstallCallback_.onFirmwareStatus(UpgradeStatus::UPDATING);
+    }
+
     return DoUpdaterInstall(componentList) == OHOS_SUCCESS;
 }
 
