@@ -102,6 +102,7 @@ ohos_shared_library("$updateengine_inner_library_name") {
     external_deps += [ "ability_runtime:extension_manager" ]
   }
 
+  version_script = "inner_api_engine.versionscript"
   cflags = [
     "-fPIC",
     "-Os",

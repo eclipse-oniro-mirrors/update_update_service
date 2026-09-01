@@ -41,6 +41,7 @@ ohos_shared_library("update_foundations") {
   external_deps = foundations_external_deps
 
   public_configs = [ ":update_service_foundations_config" ]
+
   cflags = [
     "-fPIC",
     "-Os",
