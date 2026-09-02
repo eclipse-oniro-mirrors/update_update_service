@@ -85,6 +85,7 @@ taihe_shared_library("update_ani") {
   ]
   deps = ani_deps
   external_deps = ani_external_deps
+  version_script = "update_ani.versionscript"
 }
 
 generate_static_abc("update_framework_abc") {

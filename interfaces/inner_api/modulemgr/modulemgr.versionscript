@@ -13,6 +13,16 @@
 
 1.0 {
   global:
-  local:
     *;
+  local:
+    OHOS::UpdateService::ModuleManager::HookDumpFunc*;
+    OHOS::UpdateService::ModuleManager::HookOnStartOnStopFunc*;
+    OHOS::UpdateService::ModuleManager::HookOnIdleFunc*;
+    OHOS::UpdateService::ModuleManager::HookFunc*;
+    OHOS::UpdateService::ModuleManager::onStartOnStopFuncMap_*;
+    OHOS::UpdateService::ModuleManager::onRemoteRequestFuncMap_*;
+    OHOS::UpdateService::ModuleManager::onIdleFuncMap_*;
+    OHOS::UpdateService::ModuleManager::onDumpFuncMap_*;
+    OHOS::UpdateService::ModuleManager::isLoaded*;
+    OHOS::UpdateService::ModuleManager::ModuleManager*;
 };

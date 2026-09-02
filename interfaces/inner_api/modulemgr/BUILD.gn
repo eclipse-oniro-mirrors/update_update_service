@@ -37,6 +37,7 @@ ohos_shared_library("update_module_mgr") {
   subsystem_name = "updater"
   cflags = modulemgr_cflags
 
+  version_script = "modulemgr.versionscript"
   innerapi_tags = [ "sasdk" ]
   public_configs = [ ":module_mgr_library_native_config" ]
 }
