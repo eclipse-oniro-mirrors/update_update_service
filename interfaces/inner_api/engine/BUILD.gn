@@ -68,7 +68,7 @@ ohos_shared_library("$updateengine_inner_library_name") {
     "$updateengine_root_path/interfaces/inner_api/engine/src/update_service_kits_impl.cpp",
   ]
 
-  sources += filter_include(output_values, [ "*.cpp" ])
+  sources += filter_include(output_values, [ "*callback_stub.cpp", "*_proxy.cpp" ])
   include_dirs = [
     "$updateengine_root_path/interfaces/inner_api/feature/update_model",
     "$updateengine_root_path/interfaces/inner_api/engine/include",
