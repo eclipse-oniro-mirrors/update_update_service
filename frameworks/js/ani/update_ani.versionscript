@@ -16,11 +16,11 @@
     *;
   local:
     extern "C++" {
-      *AniBaseUpdater*;
-      *AniRestorer*;
-      *AniUpdater*;
-      *AniCommonConverter::Converter*;
-      *AniLocalUpdater::VerifyUpgradePackageSync*;
-      *AniLocalUpdater::ApplyNewVersionSync*;
+      *OHOS::UpdateService::AniBaseUpdater*;
+      *OHOS::UpdateService::AniRestorer*;
+      *OHOS::UpdateService::AniUpdater*;
+      *OHOS::UpdateService::AniCommonConverter::Converter*;
+      *OHOS::UpdateService::AniLocalUpdater::VerifyUpgradePackageSync*;
+      *OHOS::UpdateService::AniLocalUpdater::ApplyNewVersionSync*;
     };
 };

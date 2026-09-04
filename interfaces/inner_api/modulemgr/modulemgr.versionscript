@@ -15,14 +15,14 @@
   global:
     *;
   local:
-    *ModuleManager::HookDumpFunc*;
-    *ModuleManager::HookOnStartOnStopFunc*;
-    *ModuleManager::HookOnIdleFunc*;
-    *ModuleManager::HookFunc*;
-    *ModuleManager::onStartOnStopFuncMap_*;
-    *ModuleManager::onRemoteRequestFuncMap_*;
-    *ModuleManager::onIdleFuncMap_*;
-    *ModuleManager::onDumpFuncMap_*;
-    *ModuleManager::isLoaded*;
-    *ModuleManager::ModuleManager*;
+    *OHOS::UpdateService::ModuleManager::HookDumpFunc*;
+    *OHOS::UpdateService::ModuleManager::HookOnStartOnStopFunc*;
+    *OHOS::UpdateService::ModuleManager::HookOnIdleFunc*;
+    *OHOS::UpdateService::ModuleManager::HookFunc*;
+    *OHOS::UpdateService::ModuleManager::onStartOnStopFuncMap_*;
+    *OHOS::UpdateService::ModuleManager::onRemoteRequestFuncMap_*;
+    *OHOS::UpdateService::ModuleManager::onIdleFuncMap_*;
+    *OHOS::UpdateService::ModuleManager::onDumpFuncMap_*;
+    *OHOS::UpdateService::ModuleManager::isLoaded*;
+    *OHOS::UpdateService::ModuleManager::ModuleManager*;
 };
