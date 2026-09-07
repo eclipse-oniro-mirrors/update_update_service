@@ -15,16 +15,7 @@
   global:
     *;
   local:
-    *OHOS::UpdateService::UpdateLog::SplitLogByFmtLabel*;
-    *OHOS::UpdateService::UpdateLog::FindSubStrCount*;
-    *OHOS::UpdateService::UpdateLog::GetBriefFileName*;
-    *OHOS::UpdateService::UpdateLog::GetFmtLabel*;
-    *OHOS::UpdateService::UpdateLog::PrintSingleLine*;
-    *OHOS::UpdateService::UpdateLog::SetLogLevel*;
-    *OHOS::UpdateService::UpdateLog::JudgeLevel*;
-    *OHOS::UpdateService::UpdateLog::PrintLog*;
-    *OHOS::UpdateService::UpdateLog::GetLogLevel*;
-    *OHOS::UpdateService::UpdateLog::level_*;
+    *OHOS::UpdateService::UpdateLog::*;
     *OHOS::UpdateService::LoadSaService::instanceLock_*;
     *OHOS::UpdateService::LoadSaService::instance_*;
     *OHOS::UpdateService::LoadSaService::LoadSaService*;
