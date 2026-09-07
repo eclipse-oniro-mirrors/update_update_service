@@ -70,4 +70,5 @@ ohos_shared_library("$updateengine_library_name") {
   subsystem_name = "updater"
   defines = sa_defines
   cflags = sa_cflags
+  version_script = "engine_sa.versionscript"
 }
