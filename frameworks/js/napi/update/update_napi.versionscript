@@ -17,7 +17,7 @@
       *OHOS::UpdateService::LocalUpdater*;
       *OHOS::UpdateService::UpdateClient*;
       *OHOS::UpdateService::Restorer*;
-    }
+    };
   local:
     *;
 };
