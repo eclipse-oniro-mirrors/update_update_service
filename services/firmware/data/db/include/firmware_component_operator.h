@@ -45,6 +45,7 @@ public:
 #endif
     ~FirmwareComponentOperator() = default;
     bool UpdateProgressByUrl(const std::string &url, UpgradeStatus status, int32_t progress);
+    bool UpdateProgressByVersionId(const std::string &versionId, UpgradeStatus status, int32_t progress);
     bool UpdateStatusByUrl(const std::string &url, UpgradeStatus status);
     bool UpdateUrlByVersionId(const std::string &versionId, const std::string &url);
     bool UpdateRecordPointByUrl(const std::string &url, int64_t recordPoint);

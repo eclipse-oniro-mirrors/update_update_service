@@ -16,6 +16,7 @@
 #include "firmware_preferences_utils.h"
 
 #include "constant.h"
+#include "firmware_constant.h"
 #include "firmware_log.h"
 
 namespace OHOS {
@@ -33,6 +34,36 @@ FirmwarePreferencesUtil::~FirmwarePreferencesUtil()
 std::string FirmwarePreferencesUtil::GetPath()
 {
     return Constant::PREFERENCES_ROOT_PATH + "/update_firmware_sp.xml";
+}
+
+int64_t FirmwarePreferencesUtil::GetAutoUpgradeTime(int64_t defaultVal)
+{
+    return ObtainLong("auto_upgrade_time", defaultVal);
+}
+
+void FirmwarePreferencesUtil::SaveAutoUpgradeTime(int64_t time)
+{
+    SaveLong("auto_upgrade_time", time);
+}
+
+bool FirmwarePreferencesUtil::GetAutoDownloadSwitch()
+{
+    return ObtainBool(Firmware::AUTO_DOWNLOAD_SWITCH, false);
+}
+
+void FirmwarePreferencesUtil::SaveAutoDownloadSwitch(bool value)
+{
+    SaveBool(Firmware::AUTO_DOWNLOAD_SWITCH, value);
+}
+
+bool FirmwarePreferencesUtil::GetNightUpgradeSwitch()
+{
+    return ObtainBool("night_upgrade_switch", false);
+}
+
+void FirmwarePreferencesUtil::SaveNightUpgradeSwitch(bool value)
+{
+    SaveBool("night_upgrade_switch", value);
 }
 } // namespace UpdateService
 } // namespace OHOS

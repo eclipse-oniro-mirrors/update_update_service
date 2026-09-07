@@ -45,30 +45,23 @@ public:
     void DoDownload(const DownloadOptions &downloadOptions, BusinessError &businessError);
     void DoInstall(const UpgradeOptions &upgradeOptions, BusinessError &businessError, InstallType installType);
     void DoAutoDownloadSwitchChanged(bool isDownloadSwitchOn);
+    void DoAutoUpgradeSwitchChanged(bool isNightUpgradeSwitchOn);
     void DoClearError(BusinessError &businessError);
-    void HandleEvent(CommonEventType event);
     void DoCancel(BusinessError &businessError);
     void DoTerminateUpgrade(BusinessError &businessError);
 
 private:
     void DelayInit(StartupReason startupReason);
     void RestoreUpdate();
-    void HandleBootComplete();
-    void HandleNetChanged();
     void NotifyInitEvent();
+    void RegisterAllListeners();
 
     void HandleBootInstallOnStatusProcess(FirmwareTask &task);
-    void HandleBootApplyOnStatusProcess(const FirmwareTask &task);
-    void HandleBootUpdateOnStatusProcess(const FirmwareTask &task);
     void HandleBootDownloadOnStatusProcess(FirmwareTask &task);
-    void HandleBootDownloadPauseStatusProcess(FirmwareTask &task);
     void HandleBootDownloadedStatusProcess(FirmwareTask &task);
-    void HandleBootUpdateSuccess(const FirmwareTask &task);
-    void HandleBootUpdateFail(const FirmwareTask &task, const std::map<std::string, UpdateResult> &resultMap);
-    void DoAutoDownload(const FirmwareTask &task);
 
-    void HandleResumeDownload(FirmwareTask &task);
     bool CanInstall(void);
+    ScheduleTask GetAutoUpgradeScheduleTask();
 
 private:
     std::shared_ptr<FirmwarePreferencesUtil> preferencesUtil_ =

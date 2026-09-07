@@ -27,19 +27,20 @@ namespace UpdateService {
 class ISystemAbilityOperator {
 public:
     virtual ~ISystemAbilityOperator() = default;
-    virtual bool UpdateStartupPolicy(const std::vector<ScheduleTask> &scheduleTasks) = 0;
+    virtual bool UpdateStartupPolicy(const std::vector<ScheduleTask> &scheduleTasks,
+        const std::string &timeEventName) = 0;
     virtual bool UnloadSystemAbility() = 0;
     virtual std::vector<SystemAbilityOnDemandEvent> GetStartupOnDemandPolicy() = 0;
 };
 
 class SystemAbilityOperator final : public ISystemAbilityOperator {
 public:
-    bool UpdateStartupPolicy(const std::vector<ScheduleTask> &scheduleTasks) final;
+    bool UpdateStartupPolicy(const std::vector<ScheduleTask> &scheduleTasks, const std::string &timeEventName) final;
     bool UnloadSystemAbility() final;
     std::vector<SystemAbilityOnDemandEvent> GetStartupOnDemandPolicy() final;
 
 private:
-    SystemAbilityOnDemandEvent CreateTimedEvent(const uint64_t nextStartDuration);
+    SystemAbilityOnDemandEvent CreateTimedEvent(uint64_t nextStartDuration, const std::string &timedEventName);
     bool UpdateStartupOnDemandPolicy(const std::vector<SystemAbilityOnDemandEvent> &events);
     sptr<ISystemAbilityManager> GetSystemAbilityManager() const;
 };

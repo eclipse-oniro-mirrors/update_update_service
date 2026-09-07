@@ -17,6 +17,8 @@
 
 #include <thread>
 
+#include "ffrt.h"
+
 #include "event_id.h"
 #include "firmware_callback_utils.h"
 #include "firmware_component_operator.h"
@@ -31,8 +33,7 @@ namespace UpdateService {
 void FirmwareInstallExecutor::Execute()
 {
     FIRMWARE_LOGI("FirmwareInstallExecutor::Execute");
-    std::thread installThread([this] { this->DoInstall(); });
-    installThread.detach();
+    ffrt::submit([executor = shared_from_this()] { executor->DoInstall(); });
 }
 
 void FirmwareInstallExecutor::DoInstall()

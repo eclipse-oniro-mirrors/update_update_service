@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,32 +15,23 @@
 
 #include "firmware_download_executor.h"
 
-#include <cinttypes>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <thread>
+#include "ffrt.h"
 
-#include "constant.h"
+#include "download_task_manager.h"
 #include "dupdate_errno.h"
-#include "download_info.h"
-#include "file_utils.h"
 #include "firmware_callback_utils.h"
 #include "firmware_component_operator.h"
-#include "firmware_constant.h"
 #include "firmware_log.h"
 #include "firmware_task_operator.h"
 #include "firmware_update_helper.h"
-#include "progress_thread.h"
 #include "string_utils.h"
 
 namespace OHOS {
 namespace UpdateService {
-const mode_t MKDIR_MODE = 0770;
 void FirmwareDownloadExecutor::Execute()
 {
     FIRMWARE_LOGI("FirmwareDownloadExecutor::Execute");
-    std::thread downloadThread([this] { this->DoDownload(); });
-    downloadThread.detach();
+    ffrt::submit([ex = shared_from_this()] { ex->DoDownload(); });
 }
 
 void FirmwareDownloadExecutor::DoDownload()
@@ -59,111 +50,102 @@ void FirmwareDownloadExecutor::DoDownload()
     if (tasks_.downloadTaskId.empty()) {
         // 首次触发下载
         PerformDownload();
-    } else {
-        // 恢复下载
-        Progress progress;
-        progress.status = UpgradeStatus::DOWNLOAD_FAIL;
-        progress.endReason = "not support";
-        firmwareProgressCallback_.progressCallback(progress);
         return;
     }
+
+    // 恢复下载
+    PerformResumeDownload();
 }
 
 void FirmwareDownloadExecutor::PerformDownload()
 {
-    std::vector<DownloadInfo> downLoadInfos;
-    for (const auto &component : components_) {
-        DownloadInfo downloadInfo;
-        downloadInfo.versionId = component.url;
-        downloadInfo.url = component.url;
-        downloadInfo.path = component.spath;
-        downloadInfo.packageSize = component.size;
-        downloadInfo.veriftInfo = component.verifyInfo;
-        downloadInfo.isNeedAutoResume = false;
-        downLoadInfos.push_back(downloadInfo);
-        FIRMWARE_LOGD("downloadInfo %s", downloadInfo.ToString().c_str());
-
-        if (access(Constant::DUPDATE_ENGINE_PACKAGE_ROOT_PATH.c_str(), 0) == -1) {
-            mkdir(Constant::DUPDATE_ENGINE_PACKAGE_ROOT_PATH.c_str(), MKDIR_MODE);
+    std::vector<DownloadInfo> downloadInfos = BuildDownloadInfos();
+    if (downloadInfos.empty()) {
+        return;
+    }
+    auto weakThis = weak_from_this();
+    auto cb = [weakThis, this](const std::string &taskId, ProgressInfo progressInfo) {
+        const auto sharedPtr = weakThis.lock();
+        if (sharedPtr == nullptr) {
+            FIRMWARE_LOGE("PerformDownload, callback is expired, taskId %{public}s, %{public}s", taskId.c_str(),
+                progressInfo.ToString().c_str());
+            return;
         }
+        CallbackProgress(taskId, progressInfo);
+    };
 
-        Progress progress0 = {0, UpgradeStatus::DOWNLOADING, ""};
+    std::string downloadTaskId = DownloadTaskManager::GetInstance()->GetTaskId(downloadInfos);
 
-        std::string downloadFileName = downloadInfo.path;
-        int64_t localFileLength = static_cast<int64_t>(DownloadThread::GetLocalFileLength(downloadFileName));
-        ENGINE_LOGI("Download %{public}" PRId64 ", %{public}s", localFileLength, downloadFileName.c_str());
-        if (localFileLength == downloadInfo.packageSize && downloadInfo.packageSize != 0) {
-            progress0.percent = DOWNLOAD_FINISH_PERCENT;
-            progress0.status = UpgradeStatus::DOWNLOAD_SUCCESS;
-            DownloadCallback(downloadInfo.url, downloadFileName, progress0);
-        }
-        upgradeStatus_ = UpgradeStatus::DOWNLOADING;
-        downloadThread_ = std::make_shared<DownloadThread>(
-            [&](const std::string serverUrl, const std::string &fileName,
-                const Progress &progress) -> void {
-                DownloadCallback(serverUrl, fileName, progress);
-            });
-        int32_t ret = downloadThread_->StartDownload(downloadFileName, downloadInfo.url);
-        if (ret != 0) {
-            progress0 = {};
-            progress0.status = UpgradeStatus::DOWNLOAD_FAIL;
-            progress0.endReason = std::to_string(CAST_INT(DownloadEndReason::FAIL));
-            firmwareProgressCallback_.progressCallback(progress0);
-        }
+    if (downloadCallback_.eventCallback != nullptr) {
+        downloadCallback_.eventCallback(downloadTaskId, EventId::EVENT_DOWNLOAD_START);
     }
 
-    DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(
-        tasks_.taskId, EventId::EVENT_DOWNLOAD_START, UpgradeStatus::DOWNLOADING);
+    DownloadError downloadError;
+    downloadTaskId =
+        DownloadTaskManager::GetInstance()->Start(downloadInfos, cb, downloadError, DownloadDirType::UN_ENCRYPT_DIR);
+
+    FIRMWARE_LOGE("PerformDownload downloadTaskId %{public}s downloadError: %{public}d", downloadTaskId.c_str(),
+        CAST_INT(downloadError.endReason));
+
+    if (downloadError.errorNum != DownloadCallResult::SUCCESS) {
+        CallbackDownloadFailProgress(downloadError);
+    }
+}
+
+void FirmwareDownloadExecutor::PerformResumeDownload()
+{
+    DownloadError downloadError;
+    ProgressInfo progressInfo =
+        DownloadTaskManager::GetInstance()->GetTaskProgress(tasks_.downloadTaskId, downloadError);
+
+    FIRMWARE_LOGI("PerformResumeDownload progressInfo taskStatus %{public}d resumeDownloadError errorNum %{public}d",
+        CAST_INT(progressInfo.taskStatus), CAST_INT(downloadError.errorNum));
+    if (downloadError.errorNum != DownloadCallResult::SUCCESS) {
+        if (downloadError.endReason == DownloadEndReason::DOWNLOAD_INFO_EMPTY) {
+            PerformDownload();
+            return;
+        }
+        CallbackDownloadFailProgress(downloadError);
+        return;
+    }
+
+    if (!IsNeedResumeDownload(progressInfo, downloadError)) {
+        return;
+    }
+
+    auto weakThis = weak_from_this();
+    DownloadCallback cb = [weakThis, this](const std::string &taskId, ProgressInfo progressInfo) {
+        const auto sharedPtr = weakThis.lock();
+        if (sharedPtr == nullptr) {
+            FIRMWARE_LOGE("PerformResumeDownload, callback is expired, taskId %{public}s, %{public}s", taskId.c_str(),
+                progressInfo.ToString().c_str());
+            return;
+        }
+        CallbackProgress(taskId, progressInfo);
+    };
+
+    if (downloadCallback_.eventCallback != nullptr) {
+        downloadCallback_.eventCallback(tasks_.downloadTaskId, EventId::EVENT_DOWNLOAD_RESUME);
+    }
+    DownloadTaskManager::GetInstance()->Resume(tasks_.downloadTaskId, downloadOptions_.allowNetwork, cb, downloadError);
+    if (downloadError.errorNum == DownloadCallResult::SUCCESS) {
+        FIRMWARE_LOGI("PerformResumeDownload success, taskId %{public}s", tasks_.downloadTaskId.c_str());
+        return;
+    }
+
+    FIRMWARE_LOGI("PerformResumeDownload fail, taskId %{public}s, reason %{public}d", tasks_.downloadTaskId.c_str(),
+        CAST_INT(downloadError.endReason));
+    if (downloadError.endReason == DownloadEndReason::NET_NOT_AVAILIABLE) {
+        progressInfo.reason = DownloadEndReason::NET_NOT_AVAILIABLE;
+        CallbackProgress(tasks_.downloadTaskId, progressInfo);
+        return;
+    }
+    CallbackDownloadFailProgress(downloadError);
 }
 
 void FirmwareDownloadExecutor::GetTask()
 {
     FirmwareTaskOperator().QueryTask(tasks_);
-}
-
-void FirmwareDownloadExecutor::DownloadCallback(std::string serverUrl, std::string packageName, Progress progress)
-{
-    ENGINE_LOGD("FirmwareDownloadExecutor::DownloadCallback progress.status = %{public}d,"
-        " progress.percent = %{public}d", progress.status, progress.percent);
-    Progress downloadProgress {};
-    upgradeStatus_ = UpgradeStatus::DOWNLOADING;
-    if (progress.status == UpgradeStatus::DOWNLOAD_FAIL ||
-        progress.status == UpgradeStatus::DOWNLOAD_SUCCESS) {
-        upgradeStatus_ = progress.status;
-    }
-    downloadProgress.percent = progress.percent;
-    downloadProgress.status = progress.status;
-    downloadProgress.endReason = progress.endReason;
-
-#ifdef UPDATER_UT
-    upgradeStatus_ = UpgradeStatus::DOWNLOAD_SUCCESS;
-#endif
-    std::string fileName = packageName;
-    ENGINE_LOGI("DownloadCallback status: %{public}d progress: %{public}d", progress.status, progress.percent);
-
-    if (upgradeStatus_ == UpgradeStatus::DOWNLOAD_SUCCESS) {
-        ENGINE_LOGI("DownloadCallback fileName %{public}s", fileName.c_str());
-        if (!VerifyDownloadPkg(fileName, downloadProgress)) {
-            // If the verification fails, delete the corresponding package.
-            std::string realFileName = FileUtils::GetFileRealPath(fileName);
-            if (realFileName.substr(0, Firmware::PACKAGE_PATH.size()) == Firmware::PACKAGE_PATH) {
-                remove(fileName.c_str());
-            } else {
-                ENGINE_LOGE("fileName Invalid, can not remove");
-            }
-            downloadProgress.status = UpgradeStatus::DOWNLOAD_FAIL;
-            downloadProgress.endReason = std::to_string(DUpdateErrno::DUPDATE_ERR_VERIFY_PACKAGE_FAIL);
-        }
-    }
-
-    FirmwareComponentOperator firmwareComponentOperator;
-    // 单包进度插入到 component 表
-    ENGINE_LOGI("DownloadCallback serverUrl %s, status %{public}d %{public}d", serverUrl.c_str(),
-        progress.status, progress.percent);
-    firmwareComponentOperator.UpdateProgressByUrl(serverUrl, progress.status, progress.percent);
-    // 整体进度插入到 task 表
-    FirmwareTaskOperator().UpdateProgressByTaskId(tasks_.taskId, downloadProgress.status, downloadProgress.percent);
-    firmwareProgressCallback_.progressCallback(downloadProgress);
 }
 
 bool FirmwareDownloadExecutor::VerifyDownloadPkg(const std::string &pkgName, Progress &progress)
@@ -178,6 +160,143 @@ bool FirmwareDownloadExecutor::VerifyDownloadPkg(const std::string &pkgName, Pro
     ENGINE_LOGI("Start Checking file Sha256 %{public}s, verifyInfo %{public}s", pkgName.c_str(), verifyInfo.c_str());
     if (!verifyInfo.empty() && !Sha256Utils::CheckFileSha256String(pkgName, verifyInfo)) {
         ENGINE_LOGE("file sha256 check error, fileName:%{public}s", pkgName.c_str());
+        return false;
+    }
+    return true;
+}
+
+std::vector<DownloadInfo> FirmwareDownloadExecutor::BuildDownloadInfos() const
+{
+    std::vector<DownloadInfo> downLoadInfos;
+    for (const auto &component : components_) {
+        DownloadInfo downloadInfo;
+        downloadInfo.versionId = component.versionId;
+        downloadInfo.url = component.url;
+        downloadInfo.path = component.spath;
+        downloadInfo.packageSize = component.size;
+        downloadInfo.verifyInfo = component.verifyInfo;
+        downloadInfo.isNeedAutoResume = false;
+        downloadInfo.method = RequestMethod::GET;
+        downloadInfo.netType = downloadOptions_.allowNetwork;
+        downLoadInfos.push_back(downloadInfo);
+    }
+    return downLoadInfos;
+}
+
+FirmwareDownloadProgress FirmwareDownloadExecutor::BuildFirmwareDownloadProgress(const Progress &progress,
+    const DownloadProgress &downloadProgress)
+{
+    FirmwareDownloadProgress firmwareDownloadProgress;
+    firmwareDownloadProgress.versionId = downloadProgress.id;
+    firmwareDownloadProgress.downloadUrl = downloadProgress.downloadUrl;
+    firmwareDownloadProgress.startTime = downloadProgress.startTime;
+    firmwareDownloadProgress.endTime = downloadProgress.endTime;
+    firmwareDownloadProgress.effectiveTime = downloadProgress.effectiveTime;
+    firmwareDownloadProgress.progress = progress;
+    firmwareDownloadProgress.downloadErrorInfo = downloadProgress.downloadErrorInfo;
+    firmwareDownloadProgress.packageSize = downloadProgress.packageSize;
+    firmwareDownloadProgress.downloadedSize = downloadProgress.downloadedSize;
+    firmwareDownloadProgress.verifiedSize = downloadProgress.verifiedSize;
+    firmwareDownloadProgress.isCombineVerifyProgress = downloadProgress.isCombineVerifyProgress;
+    return firmwareDownloadProgress;
+}
+
+void FirmwareDownloadExecutor::CallbackProgress(std::string taskId, ProgressInfo progressInfo)
+{
+    FIRMWARE_LOGI("downloadCallback taskId = %{public}s, status = %{public}d, progress = %{public}d, endReason = "
+        "%{public}d",
+        taskId.c_str(), progressInfo.taskStatus, progressInfo.taskProgress, progressInfo.reason);
+    static const std::map<DownloadStatus, UpgradeStatus> statusMap = {
+        { DownloadStatus::DOWNLOADING, UpgradeStatus::DOWNLOADING },
+        { DownloadStatus::PAUSE, UpgradeStatus::DOWNLOAD_PAUSE },
+        { DownloadStatus::CANCEL, UpgradeStatus::DOWNLOAD_CANCEL },
+        { DownloadStatus::FAIL, UpgradeStatus::DOWNLOAD_FAIL },
+        { DownloadStatus::SUCCESS, UpgradeStatus::DOWNLOAD_SUCCESS },
+        { DownloadStatus::VERIFYING, UpgradeStatus::VERIFYING },
+        { DownloadStatus::AUTO_PAUSE, UpgradeStatus::DOWNLOAD_PAUSE },
+        { DownloadStatus::INIT, UpgradeStatus::DOWNLOADING }
+    };
+
+    FirmwareDownloadCallbackInfo downloadCallbackInfo;
+    for (const DownloadProgress &downloadProgress : progressInfo.progresses) {
+        auto iter = statusMap.find(downloadProgress.status);
+        if (iter == statusMap.end()) {
+            FIRMWARE_LOGE("downloadCallback unknow type %{public}d", downloadProgress.status);
+            continue;
+        }
+        Progress progress;
+        progress.status = iter->second;
+        progress.percent = downloadProgress.percent;
+        progress.endReason = std::to_string(CAST_INT(downloadProgress.reason));
+        FirmwareDownloadProgress firmwareDownloadProgress = BuildFirmwareDownloadProgress(progress, downloadProgress);
+        downloadCallbackInfo.progressList.push_back(firmwareDownloadProgress);
+    }
+
+    auto iter = statusMap.find(progressInfo.taskStatus);
+    if (iter == statusMap.end()) {
+        FIRMWARE_LOGE("downloadCallback unknow task type %{public}d", progressInfo.taskStatus);
+        return;
+    }
+
+    if (downloadCallback_.progressCallback == nullptr) {
+        return;
+    }
+    Progress taskProgress;
+    taskProgress.percent = CAST_UINT(progressInfo.taskProgress);
+    taskProgress.status = iter->second;
+    taskProgress.endReason = GetEndReason(iter->second, progressInfo.reason);
+    downloadCallbackInfo.taskProgress = taskProgress;
+    downloadCallbackInfo.downloadTaskId = taskId;
+    downloadCallback_.progressCallback(downloadCallbackInfo);
+}
+
+std::string FirmwareDownloadExecutor::GetEndReason(UpgradeStatus status, DownloadEndReason reason)
+{
+    if (status == UpgradeStatus::DOWNLOAD_PAUSE) {
+        if (reason == DownloadEndReason::NET_CHANGE) {
+            return std::to_string(DUpdateErrno::DUPDATE_ERR_DLOAD_NET_CHANGED);
+        }
+        if (reason == DownloadEndReason::NET_NOT_AVAILIABLE) {
+            return std::to_string(DUpdateErrno::DUPDATE_ERR_DLOAD_REQUEST_FAIL);
+        }
+    }
+
+    // 下载完成，错误原因返回给hap
+    if (status == UpgradeStatus::DOWNLOAD_FAIL) {
+        if (reason == DownloadEndReason::VERIFY_FAIL) {
+            return std::to_string(DUpdateErrno::DUPDATE_ERR_VERIFY_PACKAGE_FAIL);
+        }
+        if (reason == DownloadEndReason::NO_ENOUGH_MEMORY) {
+            return std::to_string(DUpdateErrno::DUPDATE_ERR_NO_ENOUGH_MEMORY);
+        }
+        if (reason == DownloadEndReason::IO_EXCEPTION) {
+            return std::to_string(DUpdateErrno::DUPDATE_ERR_IO_EXCEPTION);
+        }
+    }
+    return "";
+}
+
+void FirmwareDownloadExecutor::CallbackDownloadFailProgress(DownloadError error)
+{
+    FirmwareDownloadCallbackInfo downloadCallbackInfo;
+    downloadCallbackInfo.taskProgress.status = UpgradeStatus::DOWNLOAD_FAIL;
+    downloadCallbackInfo.taskProgress.endReason = std::to_string(CAST_INT(error.errorNum));
+    if (downloadCallback_.progressCallback != nullptr) {
+        downloadCallback_.progressCallback(downloadCallbackInfo);
+    }
+}
+
+bool FirmwareDownloadExecutor::IsNeedResumeDownload(const ProgressInfo &progressInfo, DownloadError &downloadError)
+{
+    // 如果下载已经结束（成功、失败），则回调一次下载进度，用于刷新 firmware 数据库中下载任务的状态
+    if (progressInfo.IsDownloadFinished()) {
+        CallbackProgress(tasks_.downloadTaskId, progressInfo);
+        return false;
+    }
+
+    if (progressInfo.taskStatus != DownloadStatus::PAUSE && progressInfo.taskStatus != DownloadStatus::AUTO_PAUSE) {
+        downloadError.errorNum = DownloadCallResult::FAIL;
+        CallbackDownloadFailProgress(downloadError);
         return false;
     }
     return true;

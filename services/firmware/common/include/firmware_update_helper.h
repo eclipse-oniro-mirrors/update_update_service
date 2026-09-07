@@ -38,7 +38,6 @@ namespace OHOS {
 namespace UpdateService {
 class FirmwareUpdateHelper {
 public:
-    static bool IsBatteryEnough(int32_t batteryLimit);
     static bool IsUpgradePackagesReady(const std::vector<FirmwareComponent> &componentList);
 
     static void ClearFirmwareInfo();
