@@ -49,6 +49,7 @@ ohos_shared_library("update_foundations") {
     "-fstack-protector-strong",
   ]
 
+  version_script = "fundations.versionscript"
   innerapi_tags = [ "platformsdk" ]
   part_name = "$updateengine_part_name"
   subsystem_name = "updater"
