@@ -62,7 +62,7 @@ ohos_shared_library("$updateengine_library_name") {
   include_dirs += idl_include
   sources = sa_sources
   output_values = get_target_outputs(":update_service_interface")
-  sources += filter_include(output_values, [ "*_stub.cpp" ])
+  sources += filter_include(output_values, [ "*service_stub.cpp", "*callback_proxy.cpp" ])
   deps = sa_deps
   deps += [ ":update_service_interface" ]
   external_deps = sa_external_deps

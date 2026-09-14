@@ -14,10 +14,11 @@
 1.0 {
   global:
     extern "C++" {
-      *OHOS::UpdateService::OnStart*;
-      *OHOS::UpdateService::OnStop*;
-      *OHOS::UpdateService::OnIdle*;
-      *OHOS::UpdateService::Dump*;
+      *OHOS::UpdateService::UpdateService::OnStart*;
+      *OHOS::UpdateService::UpdateService::OnStop*;
+      *OHOS::UpdateService::UpdateService::OnIdle*;
+      *OHOS::UpdateService::UpdateService::Dump*;
+      *OHOS::UpdateService::UpdateServiceStub::OnRemoteRequest*;
     };
   local:
     *;
