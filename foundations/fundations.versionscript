@@ -15,9 +15,11 @@
   global:
     *;
   local:
-    *OHOS::UpdateService::UpdateLog::*;
-    *OHOS::UpdateService::LoadSaService::instanceLock_*;
-    *OHOS::UpdateService::LoadSaService::instance_*;
-    *OHOS::UpdateService::LoadSaService::LoadSaService*;
-    *OHOS::UpdateService::LoadSaService::~LoadSaService*;
+    extern "C++" {
+      *OHOS::UpdateService::UpdateLog::*;
+      *OHOS::UpdateService::LoadSaService::instanceLock_*;
+      *OHOS::UpdateService::LoadSaService::instance_*;
+      *OHOS::UpdateService::LoadSaService::LoadSaService*;
+      *OHOS::UpdateService::LoadSaService::~LoadSaService*;
+    }
 };
