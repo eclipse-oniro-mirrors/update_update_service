@@ -17,6 +17,8 @@
 #define UPDATE_SERVICE_H
 
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <thread>
 
 #include "if_system_ability_manager.h"
@@ -27,6 +29,8 @@
 #include "iservice_restorer.h"
 #include "system_ability.h"
 
+#include "update_user_unlock_observer.h"
+#include "user_account_helper.h"
 #include "update_service_impl_manager.h"
 #include "update_service_stub.h"
 
@@ -136,6 +140,7 @@ private:
     bool IsPermissionGranted(uint32_t code);
     int32_t PermissionCheck(uint32_t code);
     bool IsResetDisabledByMdm(uint32_t code);
+    void InitBusinessAfterUnlock();
 
 #ifndef UPDATER_UT
 private:
@@ -166,6 +171,8 @@ public:
 private:
     std::mutex clientProxyMapLock_;
     std::map<UpgradeInfo, ClientProxy> clientProxyMap_;
+    std::shared_ptr<UpdateUserUnlockObserver> userUnlockObserver_ = nullptr;
+    UserAccountHelper userAccountHelper_;
     static sptr<UpdateService> updateService_;
     std::shared_ptr<UpdateServiceImplManager> updateImplMgr_ = nullptr;
 };

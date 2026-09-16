@@ -26,10 +26,11 @@
 namespace OHOS {
 namespace UpdateService {
 void BaseCallbackUtils::NotifyEvent(const std::string &versionDigestInfo, EventId eventId, UpgradeStatus status,
-    const ErrorMessage &errorMessage, const std::vector<VersionComponent> &versionComponents)
+    const ErrorMessage &errorMessage, const std::vector<VersionComponent> &versionComponents, int32_t progress)
 {
     TaskBody taskBody;
     taskBody.status = status;
+    taskBody.progress = progress;
     taskBody.versionDigestInfo.versionDigest = versionDigestInfo;
     taskBody.errorMessages.push_back(errorMessage);
     taskBody.versionComponents = versionComponents;

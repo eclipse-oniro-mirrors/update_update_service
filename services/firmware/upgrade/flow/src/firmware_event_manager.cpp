@@ -15,7 +15,6 @@
 
 #include "firmware_event_manager.h"
 
-#include "bell_utils.h"
 #include "dupdate_net_manager.h"
 #include "event_id.h"
 #include "firmware_auto_upgrade_alarm_manager.h"
@@ -29,6 +28,7 @@
 #include "firmware_log.h"
 #include "firmware_manager.h"
 #include "firmware_update_helper.h"
+#include "firmware_upgrade_processor.h"
 #include "progress_thread.h"
 #include "string_utils.h"
 #include "upgrade_status.h"
@@ -116,15 +116,6 @@ void FirmwareEventManager::HandleNightUpgrade()
 
 void FirmwareEventManager::DoNightUpgrade(const FirmwareTask &task)
 {
-    if (BellUtils::IsSupported() && BellUtils::GetBellStatus()) {
-        if (preferencesUtil_->SaveBool(Firmware::RESTORE_BOOT_ANIMATION_SOUND, true)) {
-            BellUtils::TurnOffBell();
-            FIRMWARE_LOGI("Turn off boot animation sound before night upgrade");
-        } else {
-            FIRMWARE_LOGE("Save boot animation sound restore flag failed");
-        }
-    }
-
     BusinessError businessError;
     std::vector<ErrorMessage> errorMessages;
     UpgradeOptions options;
@@ -176,13 +167,16 @@ void FirmwareEventManager::HandleBootComplete()
     }
 
     FIRMWARE_LOGI("HandleBootComplete status %{public}d", CAST_INT(task.status));
+
     if (task.status == UpgradeStatus::UPDATING) {
+        FirmwareUpgradeProcessor().ProcessAfterUpgrade();
         HandleBootUpdateOnStatusProcess(task);
         return;
     }
 
     // ab 升级安装完成
     if (task.status == UpgradeStatus::INSTALL_SUCCESS) {
+        FirmwareUpgradeProcessor().ProcessAfterUpgrade();
         HandleBootUpdateSuccess(task);
         return;
     }

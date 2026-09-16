@@ -56,18 +56,16 @@ firmware_src = [
   "$firmware_root_path/callback/src/firmware_callback_utils.cpp",
   "$firmware_root_path/common/src/firmware_update_helper.cpp",
   "$firmware_root_path/alarm/src/firmware_auto_upgrade_alarm_manager.cpp",
-  "$firmware_root_path/alarm/src/firmware_night_upgrade_alarm_manager.cpp",
-  "$firmware_root_path/alarm/src/night_upgrade_alarm_manager.cpp",
   "$firmware_root_path/data/manager/src/firmware_preferences_utils.cpp",
   "$firmware_root_path/upgrade/data_processor/src/firmware_download_data_processor.cpp",
   "$firmware_root_path/upgrade/data_processor/src/firmware_install_data_processor.cpp",
   "$firmware_root_path/upgrade/executor/src/firmware_apply_executor.cpp",
   "$firmware_root_path/upgrade/executor/src/firmware_check_executor.cpp",
-  "$firmware_root_path/upgrade/executor/src/firmware_download_executor.cpp",
   "$firmware_root_path/upgrade/executor/src/firmware_install_executor.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_flow_manager.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_manager.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_event_manager.cpp",
+  "$firmware_root_path/upgrade/flow/src/firmware_upgrade_processor.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_install.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_updater_install.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_install_factory.cpp",
@@ -78,23 +76,52 @@ firmware_src = [
   "$firmware_root_path/utils/src/firmware_combine_version_utils.cpp",
 ]
 
+if (update_service_night_upgrade) {
+  firmware_src += [
+    "$firmware_root_path/alarm/src/firmware_night_upgrade_alarm_manager.cpp",
+    "$firmware_root_path/alarm/src/night_upgrade_alarm_manager.cpp",
+  ]
+} else {
+  firmware_src += [
+    "$firmware_root_path/alarm/src/firmware_night_upgrade_alarm_manager_empty.cpp",
+  ]
+}
+
+if (update_service_download) {
+  firmware_src += [
+    "$firmware_root_path/upgrade/executor/src/firmware_download_executor.cpp",
+  ]
+} else {
+  firmware_src += [
+    "$firmware_root_path/upgrade/executor/src/firmware_download_executor_empty.cpp",
+  ]
+}
+
+if (update_service_download && communication_netmanager_base_enable) {
+  firmware_src += [
+    "$firmware_root_path/upgrade/mode/src/firmware_download_mode.cpp",
+    "$firmware_root_path/upgrade/mode/src/firmware_download_process.cpp",
+  ]
+} else {
+  firmware_src += [
+    "$firmware_root_path/upgrade/mode/src/firmware_download_mode_empty.cpp",
+    "$firmware_root_path/upgrade/mode/src/firmware_download_process_empty.cpp",
+  ]
+}
+
 if (communication_netmanager_base_enable) {
   firmware_src += [
     "$firmware_root_path/event/src/firmware_event_listener.cpp",
     "$firmware_root_path/upgrade/data_processor/src/firmware_check_data_processor.cpp",
-    "$firmware_root_path/upgrade/mode/src/firmware_download_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_auto_upgrade_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_manual_check_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_install_apply_mode.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_stream_install_apply_mode.cpp",
-    "$firmware_root_path/upgrade/mode/src/firmware_download_process.cpp",
   ]
 } else {
   firmware_src += [
     "$firmware_root_path/event/src/firmware_event_listener_empty.cpp",
     "$firmware_root_path/upgrade/data_processor/src/firmware_check_data_processor_empty.cpp",
-    "$firmware_root_path/upgrade/mode/src/firmware_download_mode_empty.cpp",
-    "$firmware_root_path/upgrade/mode/src/firmware_download_process_empty.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_auto_upgrade_mode_empty.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_manual_check_mode_empty.cpp",
     "$firmware_root_path/upgrade/mode/src/firmware_install_apply_mode_empty.cpp",

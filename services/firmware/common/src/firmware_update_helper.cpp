@@ -44,6 +44,8 @@ void FirmwareUpdateHelper::ClearFirmwareInfo()
     firmwareTaskOperator.DeleteAll();
     FirmwareComponentOperator().DeleteAll();
     FirmwareFileUtils::DeleteDownloadFiles();
+    DownloadError error;
+    DownloadTaskManager::GetInstance()->RemoveTask(task.downloadTaskId, error);
 }
 
 InstallType FirmwareUpdateHelper::GetInstallType()
