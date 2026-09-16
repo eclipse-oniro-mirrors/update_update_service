@@ -29,7 +29,6 @@ bool MusicStateUtils::IsMusicActive()
     }
 
     return audioMgr->IsStreamActive(AudioStandard::SaSdkAudioVolumeType::SASDK_STREAM_MUSIC);
-
 }
 } // namespace UpdateService
 } // namespace OHOS

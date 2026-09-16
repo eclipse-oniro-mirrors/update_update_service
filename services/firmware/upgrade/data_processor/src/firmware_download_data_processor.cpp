@@ -34,8 +34,8 @@ FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor()
     GetTask();
     downloadProgress_.percent = tasks_.progress;
     downloadProgress_.status = tasks_.status;
-    FIRMWARE_LOGI("FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor, status: %{public}d progress: %{public}d", downloadProgress_.status,
-        downloadProgress_.percent);
+    FIRMWARE_LOGI("FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor, status: %{public}d progress: %{public}d",
+        downloadProgress_.status, downloadProgress_.percent);
 }
 
 FirmwareDownloadDataProcessor::~FirmwareDownloadDataProcessor()

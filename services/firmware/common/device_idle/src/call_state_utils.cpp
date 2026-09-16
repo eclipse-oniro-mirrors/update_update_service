@@ -27,7 +27,6 @@ bool CallStateUtils::HasCall()
     return audioScene == AudioStandard::AudioScene::AUDIO_SCENE_RINGING ||
            audioScene == AudioStandard::AudioScene::AUDIO_SCENE_PHONE_CALL ||
            audioScene == AudioStandard::AudioScene::AUDIO_SCENE_PHONE_CHAT;
-
 }
 } // namespace UpdateService
 } // namespace OHOS
