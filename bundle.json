@@ -20,7 +20,9 @@
       "update_service_enable_run_on_demand_qos",
       "update_service_online_updater",
       "update_service_updater_sa_cfg_path",
-      "update_service_sa_profile_path"
+      "update_service_sa_profile_path",
+      "update_service_night_upgrade",
+      "update_service_download"
     ],
     "adapted_system_type": [
       "standard"
@@ -33,6 +35,8 @@
         "bundle_framework",
         "c_utils",
         "cJSON",
+        "common_event_service",
+        "os_account",
         "curl",
         "eventhandler",
         "graphic_2d",

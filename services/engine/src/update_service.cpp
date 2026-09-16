@@ -28,7 +28,6 @@
 #include "config_parse.h"
 #include "dupdate_net_manager.h"
 #include "firmware_common.h"
-#include "firmware_manager.h"
 #include "ipc_skeleton.h"
 #include "module_manager.h"
 #include "parameter.h"
@@ -499,9 +498,17 @@ void UpdateService::SetThreadPrio(int priority)
 }
 #endif
 
+void UpdateService::InitBusinessAfterUnlock()
+{
+    ENGINE_LOGI("Initialize NetManager after user unlock");
+    DelayedSingleton<NetManager>::GetInstance()->Init();
+    ENGINE_LOGI("Start StartupManager after user unlock");
+    DelayedSingleton<StartupManager>::GetInstance()->Start();
+}
+
 void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
-    ENGINE_LOGI("UpdaterService oh OnStart, startReason name %{public}s, id %{public}d, value %{public}s",
+    ENGINE_LOGI("UpdaterService OnStart begin, startReason name %{public}s, id %{public}d, value %{public}s",
         startReason.GetName().c_str(), CAST_INT(startReason.GetId()), startReason.GetValue().c_str());
     updateService_ = this;
     if (updateService_ == nullptr) {
@@ -520,11 +527,13 @@ void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
 #endif
 
     if (!ModuleManager::GetInstance().IsModuleLoaded()) {
-        ENGINE_LOGI("IsModuleLoaded false, init updateservice_sa");
-        DelayedSingleton<NetManager>::GetInstance()->Init();
-
-        // 动态启停流程启动
-        DelayedSingleton<StartupManager>::GetInstance()->Start();
+        if (userUnlockObserver_ == nullptr) {
+            userUnlockObserver_ = std::make_shared<UpdateUserUnlockObserver>(
+                [this]() {
+                    InitBusinessAfterUnlock();
+                });
+        }
+        userUnlockObserver_->Start();
     }
 
     if (Publish(this)) {
@@ -547,20 +556,30 @@ int32_t UpdateService::OnIdle(const SystemAbilityOnDemandReason &idleReason)
 
 void UpdateService::OnStop(const SystemAbilityOnDemandReason &stopReason)
 {
-    ENGINE_LOGI("UpdaterService OnStop");
+    ENGINE_LOGI("UpdaterService OnStop begin");
+    if (userUnlockObserver_ != nullptr) {
+        userUnlockObserver_->Stop();
+    }
     ModuleManager::GetInstance().HandleOnStartOnStopFunc("OnStop", stopReason);
+    ENGINE_LOGI("UpdaterService OnStop end");
 }
 
 int32_t UpdateService::CallbackEnter(uint32_t code)
 {
     // 未加载接口扩展能力，执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsModuleLoaded()) {
+        if (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked()) {
+            return INT_FORBIDDEN;
+        }
         ENGINE_LOGI("CallbackEnter, extend module not loaded, code %{public}u", code);
         return PermissionCheck(code);
     }
 
     // 加载了接口扩展能力， 但是当前调用接口不是拓展接口，还是执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsMapFuncExist(code)) {
+        if (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked()) {
+            return INT_FORBIDDEN;
+        }
         ENGINE_LOGE("CallbackEnter, code %{public}u not extended", code);
         return PermissionCheck(code);
     }

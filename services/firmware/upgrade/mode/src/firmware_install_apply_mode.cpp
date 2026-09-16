@@ -30,6 +30,7 @@
 #include "firmware_status_cache.h"
 #include "firmware_task_operator.h"
 #include "firmware_update_helper.h"
+#include "firmware_upgrade_processor.h"
 
 #include "battery_state_utils.h"
 #include "device_idle_utils.h"
@@ -69,7 +70,12 @@ FirmwareStep FirmwareInstallApplyMode::GetStepAfterInit()
         static_cast<int32_t>(tasks_.status), tasks_.taskId.c_str(), CAST_INT(upgradeOptions_.order));
 
     if (upgradeOptions_.order == Order::INSTALL || upgradeOptions_.order == Order::INSTALL_AND_APPLY) {
-        return GetStepForInstallAndApplyOrder();
+        FirmwareStep step = GetStepForInstallAndApplyOrder();
+        // 安装条件全部满足后，统一执行升级前处理。
+        if (step == FirmwareStep::INSTALL_STEP) {
+            FirmwareUpgradeProcessor().ProcessBeforeUpgrade(tasks_);
+        }
+        return step;
     }
 
     if (upgradeOptions_.order == Order::APPLY) {
@@ -139,6 +145,8 @@ FirmwareStep FirmwareInstallApplyMode::GetStepAfterInstall()
 {
     FIRMWARE_LOGI("FirmwareInstallApplyMode installOptions %{public}d", CAST_INT(upgradeOptions_.order));
     if (!installStepDataProcessor_.HasInstallSuccess()) {
+        // 安装失败不会触发设备重启，立即恢复升级前修改的状态。
+        FirmwareUpgradeProcessor().ProcessAfterUpgrade();
         FirmwareUpdateHelper::ClearFirmwareInfo();
     }
 

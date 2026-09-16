@@ -34,6 +34,13 @@ public:
     bool GetNightUpgradeSwitch();
     void SaveNightUpgradeSwitch(bool value);
 
+    bool IsNeedRetryCheck();
+    bool SaveNeedRetryCheckFlag(bool needRetry);
+
+    bool GetBellStatus();
+    bool SaveBellStatus(bool isBellOn);
+    bool RemoveBellStatus();
+
 protected:
     std::string GetPath() final;
 };

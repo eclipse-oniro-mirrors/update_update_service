@@ -146,11 +146,6 @@ DownloadOptions FirmwareDownloadMode::GetDownloadOptions()
     return downloadOptions_;
 }
 
-void FirmwareDownloadMode::SetDownloadProgress(const Progress &progress)
-{
-    downloadDataProcessor_.SetDownloadProgress(progress);
-}
-
 void FirmwareDownloadMode::SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo)
 {
     downloadDataProcessor_.SetDownloadCallbackInfo(callbackInfo);

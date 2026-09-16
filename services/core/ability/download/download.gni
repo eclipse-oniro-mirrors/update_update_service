@@ -24,7 +24,9 @@ download_include = [
     "$download_root_path/task/include",
 ]
 
-download_src = [
+download_src = []
+if (update_service_download) {
+  download_src += [
     "$download_root_path/task/src/download_service.cpp",
     "$download_root_path/task/src/download_task.cpp",
     "$download_root_path/task/src/download_task_progress_processor.cpp",
@@ -34,4 +36,9 @@ download_src = [
     "$download_root_path/data/src/download_info_operator.cpp",
     "$download_root_path/data/src/download_info_table.cpp",
     "$download_root_path/manager/src/download_task_manager.cpp",
-]
+  ]
+} else {
+  download_src += [
+    "$download_root_path/manager/src/download_task_manager_empty.cpp",
+  ]
+}

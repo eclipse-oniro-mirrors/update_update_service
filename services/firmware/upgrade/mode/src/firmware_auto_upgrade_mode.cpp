@@ -27,7 +27,6 @@
 #include "string_utils.h"
 
 namespace OHOS::UpdateService {
-
 FirmwareStep FirmwareAutoUpgradeMode::GetNextStep(FirmwareStep step)
 {
     FIRMWARE_LOGI("FirmwareAutoUpgradeMode::GetNextStep %{public}d", static_cast<uint32_t>(step));
@@ -53,6 +52,9 @@ FirmwareStep FirmwareAutoUpgradeMode::GetStepAfterInit()
     // 开始执行搜包，刷新下载自动搜包定时器
     FirmwareAutoUpgradeAlarmManager::GetInstance()->RefreshAutoUpgradeAlarm();
     if (!NetManager::GetInstance()->IsNetAvailable()) {
+        // 无网导致自动搜包无法发起，记录待重试标记。
+        FIRMWARE_LOGI("GetStepAfterInit network unavailable, save need retry check true");
+        FirmwarePreferencesUtil::GetInstance()->SaveNeedRetryCheckFlag(true);
         return FirmwareStep::COMPLETE;
     }
 
@@ -111,9 +113,18 @@ FirmwareStep FirmwareAutoUpgradeMode::GetStepAfterCheck()
         StringUtils::GetBoolStr(isCheckFail).c_str(), StringUtils::GetBoolStr(isSame).c_str(),
         StringUtils::GetBoolStr(hasNewVersion).c_str());
     if (isCheckFail) {
+        FIRMWARE_LOGI("GetStepAfterInit network unavailable, save need retry check true");
+        FirmwarePreferencesUtil::GetInstance()->SaveNeedRetryCheckFlag(true);
         return FirmwareStep::COMPLETE;
     }
     if (!FirmwarePreferencesUtil::GetInstance()->GetAutoDownloadSwitch()) {
+        GetTask();
+        if (hasNewVersion && task_.isExistTask && task_.status == UpgradeStatus::CHECK_VERSION_SUCCESS) {
+            FIRMWARE_LOGI("Auto check success, show download dialog, isSameWithDb %{public}s",
+                StringUtils::GetBoolStr(isSame).c_str());
+            DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->NotifyEvent(
+                task_.taskId, EventId::EVENT_DOWNLOAD_WAIT, UpgradeStatus::CHECK_VERSION_SUCCESS);
+        }
         FIRMWARE_LOGI("GetStepAfterCheck, ignore download, auto download switch is off");
         return FirmwareStep::COMPLETE;
     }

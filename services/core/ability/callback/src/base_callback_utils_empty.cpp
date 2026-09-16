@@ -22,7 +22,7 @@
 namespace OHOS {
 namespace UpdateService {
 void BaseCallbackUtils::NotifyEvent(const std::string &versionDigestInfo, EventId eventId, UpgradeStatus status,
-    const ErrorMessage &errorMessage, const std::vector<VersionComponent> &versionComponents)
+    const ErrorMessage &errorMessage, const std::vector<VersionComponent> &versionComponents, int32_t progress)
 {
     ENGINE_LOGI("BaseCallbackUtils NotifyEvent");
 }

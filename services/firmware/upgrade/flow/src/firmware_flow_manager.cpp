@@ -91,19 +91,6 @@ void FirmwareFlowManager::OnCheckCallback(CheckStatus status, const Duration &du
     Execute();
 }
 
-void FirmwareFlowManager::OnDownloadCallback(const Progress &progress)
-{
-    FIRMWARE_LOGI("FirmwareFlowManager::OnDownloadCallback");
-    if (executeMode_ == nullptr) {
-        FIRMWARE_LOGE("FirmwareFlowManager executeMode is null");
-        return;
-    }
-    executeMode_->SetDownloadProgress(progress);
-    if (progress.status != UpgradeStatus::DOWNLOADING) {
-        Execute();
-    }
-}
-
 void FirmwareFlowManager::OnDownloadCallback(const FirmwareDownloadCallbackInfo &downloadCallbackInfo)
 {
     if (executeMode_ == nullptr) {

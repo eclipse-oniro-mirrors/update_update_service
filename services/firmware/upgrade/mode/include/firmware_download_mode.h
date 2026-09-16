@@ -39,7 +39,6 @@ public:
 
     ~FirmwareDownloadMode() = default;
     FirmwareStep GetNextStep(FirmwareStep step) final;
-    void SetDownloadProgress(const Progress &progress) final;
     void SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo& callbackInfo) override;
     void SetDownloadEvent(const std::string &downloadTaskId, EventId eventId) override;
     DownloadOptions GetDownloadOptions() final;
