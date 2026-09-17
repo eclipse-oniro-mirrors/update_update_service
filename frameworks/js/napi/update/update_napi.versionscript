@@ -13,11 +13,13 @@
 
 1.0 {
   global:
+    *;
+  local:
     extern "C++" {
       *OHOS::UpdateService::LocalUpdater*;
       *OHOS::UpdateService::UpdateClient*;
       *OHOS::UpdateService::Restorer*;
+      *OHOS::UpdateService::CreateJsObject*;
+      *OHOS::UpdateService::JsConstructor*;
     };
-  local:
-    *;
 };
