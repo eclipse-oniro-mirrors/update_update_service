@@ -16,6 +16,7 @@
     *;
   local:
     extern "C++" {
+      *OHOS::UpdateService::ModuleManager::ModuleManager*;
       *OHOS::UpdateService::ModuleManager::HookDumpFunc*;
       *OHOS::UpdateService::ModuleManager::HookOnStartOnStopFunc*;
       *OHOS::UpdateService::ModuleManager::HookOnIdleFunc*;
