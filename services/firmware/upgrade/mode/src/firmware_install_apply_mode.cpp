@@ -146,7 +146,7 @@ FirmwareStep FirmwareInstallApplyMode::GetStepAfterInstall()
     FIRMWARE_LOGI("FirmwareInstallApplyMode installOptions %{public}d", CAST_INT(upgradeOptions_.order));
     if (!installStepDataProcessor_.HasInstallSuccess()) {
         // 安装失败不会触发设备重启，立即恢复升级前修改的状态。
-        FirmwareUpgradeProcessor().ProcessAfterUpgrade();
+        FirmwareUpgradeProcessor().ProcessAfterUpgrade(tasks_);
         FirmwareUpdateHelper::ClearFirmwareInfo();
     }
 

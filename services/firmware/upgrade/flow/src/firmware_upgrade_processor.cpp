@@ -49,14 +49,18 @@ void FirmwareUpgradeProcessor::HandleBeforeNightUpgrade(const FirmwareTask &task
     }
 }
 
-void FirmwareUpgradeProcessor::ProcessAfterUpgrade()
+void FirmwareUpgradeProcessor::ProcessAfterUpgrade(const FirmwareTask &task)
 {
     // 升级后处理统一入口，后续新增处理项在此扩展。
-    HandleAfterNightUpgrade();
+    HandleAfterNightUpgrade(task);
 }
 
-void FirmwareUpgradeProcessor::HandleAfterNightUpgrade()
+void FirmwareUpgradeProcessor::HandleAfterNightUpgrade(const FirmwareTask &task)
 {
+    if (task.upgradeMode != UpgradeMode::NIGHT) {
+        return;
+    }
+
     auto preferencesUtil = DelayedSingleton<FirmwarePreferencesUtil>::GetInstance();
     if (!preferencesUtil->GetBellStatus()) {
         return;
