@@ -20,26 +20,18 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 
-#include "common_event_subscriber.h"
 #include "user_account_helper.h"
 
 namespace OHOS {
 namespace UpdateService {
-class UserUnlockSubscriber final : public EventFwk::CommonEventSubscriber {
-public:
-    using OnUnlockedCallback = std::function<void()>;
-
-    UserUnlockSubscriber(const EventFwk::CommonEventSubscribeInfo &subscribeInfo, OnUnlockedCallback onUnlocked);
-    ~UserUnlockSubscriber() override;
-
-    void OnReceiveEvent(const EventFwk::CommonEventData &data) override;
-
-private:
-    OnUnlockedCallback onUnlocked_;
-};
+/**
+ * 用户解锁监听的内部实现类，定义在 update_user_unlock_observer.cpp。
+ * 公共事件订阅（common_event_service）等外部依赖的细节全部封装在该类内部，
+ * 使本头文件不依赖任何外部部件，可脱离外部部件的 include 路径独立编译。
+ */
+class UserUnlockListener;
 
 class UpdateUserUnlockObserver : public std::enable_shared_from_this<UpdateUserUnlockObserver> {
 public:
@@ -61,8 +53,7 @@ private:
     UnlockCallback onUnlocked_;
     UserAccountHelper userAccountHelper_;
     std::atomic<bool> initialized_ = false;
-    std::mutex subscriberLock_;
-    std::shared_ptr<EventFwk::CommonEventSubscriber> userUnlockSubscriber_ = nullptr;
+    std::shared_ptr<UserUnlockListener> listener_ = nullptr;
 };
 } // namespace UpdateService
 } // namespace OHOS

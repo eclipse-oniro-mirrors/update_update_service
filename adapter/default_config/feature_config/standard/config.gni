@@ -31,6 +31,4 @@ declare_args() {
     && global_parts_info.update_service_online_updater == false) {
     update_service_online_updater = false
   }
-  update_service_night_upgrade = true
-  update_service_download = true
 }

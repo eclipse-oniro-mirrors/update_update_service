@@ -20,9 +20,7 @@
       "update_service_enable_run_on_demand_qos",
       "update_service_online_updater",
       "update_service_updater_sa_cfg_path",
-      "update_service_sa_profile_path",
-      "update_service_night_upgrade",
-      "update_service_download"
+      "update_service_sa_profile_path"
     ],
     "adapted_system_type": [
       "standard"

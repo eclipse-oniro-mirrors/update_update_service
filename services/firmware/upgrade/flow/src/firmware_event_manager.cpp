@@ -169,14 +169,14 @@ void FirmwareEventManager::HandleBootComplete()
     FIRMWARE_LOGI("HandleBootComplete status %{public}d", CAST_INT(task.status));
 
     if (task.status == UpgradeStatus::UPDATING) {
-        FirmwareUpgradeProcessor().ProcessAfterUpgrade();
+        FirmwareUpgradeProcessor().ProcessAfterUpgrade(task);
         HandleBootUpdateOnStatusProcess(task);
         return;
     }
 
     // ab 升级安装完成
     if (task.status == UpgradeStatus::INSTALL_SUCCESS) {
-        FirmwareUpgradeProcessor().ProcessAfterUpgrade();
+        FirmwareUpgradeProcessor().ProcessAfterUpgrade(task);
         HandleBootUpdateSuccess(task);
         return;
     }

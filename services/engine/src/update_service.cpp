@@ -508,7 +508,7 @@ void UpdateService::InitBusinessAfterUnlock()
 
 void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
-    ENGINE_LOGI("UpdaterService OnStart begin, startReason name %{public}s, id %{public}d, value %{public}s",
+    ENGINE_LOGI("UpdaterService oh OnStart, startReason name %{public}s, id %{public}d, value %{public}s",
         startReason.GetName().c_str(), CAST_INT(startReason.GetId()), startReason.GetValue().c_str());
     updateService_ = this;
     if (updateService_ == nullptr) {
@@ -569,6 +569,7 @@ int32_t UpdateService::CallbackEnter(uint32_t code)
     // 未加载接口扩展能力，执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsModuleLoaded()) {
         if (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked()) {
+            ENGINE_LOGE("CallbackEnter forbidden, active user is not unlocked, code %{public}u", code);
             return INT_FORBIDDEN;
         }
         ENGINE_LOGI("CallbackEnter, extend module not loaded, code %{public}u", code);
@@ -578,6 +579,7 @@ int32_t UpdateService::CallbackEnter(uint32_t code)
     // 加载了接口扩展能力， 但是当前调用接口不是拓展接口，还是执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsMapFuncExist(code)) {
         if (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked()) {
+            ENGINE_LOGE("CallbackEnter forbidden, active user is not unlocked, code %{public}u", code);
             return INT_FORBIDDEN;
         }
         ENGINE_LOGE("CallbackEnter, code %{public}u not extended", code);

@@ -22,11 +22,11 @@ namespace OHOS::UpdateService {
 class FirmwareUpgradeProcessor {
 public:
     void ProcessBeforeUpgrade(const FirmwareTask &task);
-    void ProcessAfterUpgrade();
+    void ProcessAfterUpgrade(const FirmwareTask &task);
 
 private:
     void HandleBeforeNightUpgrade(const FirmwareTask &task);
-    void HandleAfterNightUpgrade();
+    void HandleAfterNightUpgrade(const FirmwareTask &task);
 };
 } // namespace OHOS::UpdateService
 
