@@ -22,7 +22,6 @@
 namespace OHOS::UpdateService {
 void FirmwareUpgradeProcessor::ProcessBeforeUpgrade(const FirmwareTask &task)
 {
-    // 升级前处理统一入口，后续新增处理项在此扩展。
     HandleBeforeNightUpgrade(task);
 }
 
@@ -51,7 +50,6 @@ void FirmwareUpgradeProcessor::HandleBeforeNightUpgrade(const FirmwareTask &task
 
 void FirmwareUpgradeProcessor::ProcessAfterUpgrade(const FirmwareTask &task)
 {
-    // 升级后处理统一入口，后续新增处理项在此扩展。
     HandleAfterNightUpgrade(task);
 }
 
