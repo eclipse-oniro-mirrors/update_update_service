@@ -62,12 +62,6 @@
         "runtime_core",
         "jsoncpp",
         "taihe_ffi_gen",
-        "data_share",
-        "wifi",
-        "call_manager",
-        "core_service",
-        "cellular_data",
-        "telephony_enhanced",
         "ffrt"
       ],
       "third_party": []
