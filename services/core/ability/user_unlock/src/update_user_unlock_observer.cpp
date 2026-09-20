@@ -31,9 +31,6 @@
 namespace OHOS {
 namespace UpdateService {
 namespace {
-/**
- * 公共事件订阅者：仅在本编译单元内可见，不再出现在头文件中。
- */
 class UserUnlockSubscriber final : public EventFwk::CommonEventSubscriber {
 public:
     using OnUnlockedCallback = std::function<void()>;
@@ -72,10 +69,6 @@ void UserUnlockSubscriber::OnReceiveEvent(const EventFwk::CommonEventData &data)
 }
 } // namespace
 
-/**
- * 用户解锁监听的内部实现：把 common_event_service 的订阅、退订、事件接收等
- * 外部依赖细节统一封装在本类中，头文件里只保留前置声明。
- */
 class UserUnlockListener {
 public:
     using OnUnlockedCallback = std::function<void()>;
