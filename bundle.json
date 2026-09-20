@@ -60,12 +60,6 @@
         "time_service",
         "relational_store",
         "runtime_core",
-        "data_share",
-        "wifi",
-        "call_manager",
-        "core_service",
-        "cellular_data",
-        "telephony_enhanced",
         "ffrt"
       ],
       "third_party": []
