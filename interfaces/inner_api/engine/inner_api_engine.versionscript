@@ -19,7 +19,8 @@
       *OHOS::UpdateService::UpdateCallback::OnEvent*;
       *OHOS::UpdateService::UpdateCallbackProxy::*;
       *OHOS::UpdateService::UpdateCallback::UpdateCallback*;
-      *OHOS::UpdateService::BaseServiceKitsImpl::*;
+      *OHOS::UpdateService::UpdateCallbackStub::OnRemoteRequest*;
+      *OHOS::UpdateService::BaseServiceKitsImpl*;
       *OHOS::UpdateService::UpdateServiceKitsImpl*;
       *OHOS::UpdateService::UpdateServiceProxy*;
       *OHOS::UpdateService::BusinessError::Marshalling*;
