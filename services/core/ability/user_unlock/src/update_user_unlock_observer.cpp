@@ -15,14 +15,10 @@
 
 #include "update_user_unlock_observer.h"
 
-#include <functional>
-#include <memory>
-#include <mutex>
 #include <string>
 #include <utility>
 
 #include "common_event_manager.h"
-#include "common_event_subscriber.h"
 #include "common_event_support.h"
 #include "ffrt.h"
 
@@ -30,19 +26,6 @@
 
 namespace OHOS {
 namespace UpdateService {
-namespace {
-class UserUnlockSubscriber final : public EventFwk::CommonEventSubscriber {
-public:
-    using OnUnlockedCallback = std::function<void()>;
-
-    UserUnlockSubscriber(const EventFwk::CommonEventSubscribeInfo &subscribeInfo, OnUnlockedCallback onUnlocked);
-    ~UserUnlockSubscriber() override;
-
-    void OnReceiveEvent(const EventFwk::CommonEventData &data) override;
-
-private:
-    OnUnlockedCallback onUnlocked_;
-};
 
 UserUnlockSubscriber::UserUnlockSubscriber(
     const EventFwk::CommonEventSubscribeInfo &subscribeInfo,
@@ -67,55 +50,9 @@ void UserUnlockSubscriber::OnReceiveEvent(const EventFwk::CommonEventData &data)
         }
     });
 }
-} // namespace
-
-class UserUnlockListener {
-public:
-    using OnUnlockedCallback = std::function<void()>;
-
-    bool Register(const OnUnlockedCallback &onUnlocked)
-    {
-        std::lock_guard<std::mutex> lock(lock_);
-        if (subscriber_ != nullptr) {
-            ENGINE_LOGI("User unlock listener is already registered");
-            return true;
-        }
-
-        EventFwk::MatchingSkills matchingSkills;
-        matchingSkills.AddEvent(EventFwk::CommonEventSupport::COMMON_EVENT_USER_UNLOCKED);
-        EventFwk::CommonEventSubscribeInfo subscribeInfo(matchingSkills);
-        auto subscriber = std::make_shared<UserUnlockSubscriber>(subscribeInfo, onUnlocked);
-        if (!EventFwk::CommonEventManager::SubscribeCommonEvent(subscriber)) {
-            return false;
-        }
-        subscriber_ = subscriber;
-        ENGINE_LOGI("Subscribe user unlock listener success");
-        return true;
-    }
-
-    void Unregister()
-    {
-        std::lock_guard<std::mutex> lock(lock_);
-        if (subscriber_ == nullptr) {
-            ENGINE_LOGI("User unlock listener is already null");
-            return;
-        }
-        if (!EventFwk::CommonEventManager::UnSubscribeCommonEvent(subscriber_)) {
-            ENGINE_LOGE("Failed to unsubscribe user unlock listener");
-        } else {
-            ENGINE_LOGI("Unsubscribe user unlock listener success");
-        }
-        subscriber_ = nullptr;
-    }
-
-private:
-    std::mutex lock_;
-    std::shared_ptr<EventFwk::CommonEventSubscriber> subscriber_ = nullptr;
-};
 
 UpdateUserUnlockObserver::UpdateUserUnlockObserver(UnlockCallback onUnlocked)
-    : onUnlocked_(std::move(onUnlocked)),
-      listener_(std::make_shared<UserUnlockListener>())
+    : onUnlocked_(std::move(onUnlocked))
 {}
 
 UpdateUserUnlockObserver::~UpdateUserUnlockObserver()
@@ -154,23 +91,49 @@ bool UpdateUserUnlockObserver::HasUserUnlocked() const
 
 void UpdateUserUnlockObserver::RegisterUserUnlockListener()
 {
-    const auto weakThis = weak_from_this();
-    const bool subscribed = listener_->Register([weakThis]() {
-        const auto observer = weakThis.lock();
-        if (observer == nullptr) {
-            ENGINE_LOGI("User unlock callback skipped because observer is expired");
-            return;
-        }
-        observer->TryNotifyUnlocked();
-    });
-    if (!subscribed) {
-        ENGINE_LOGE("Failed to subscribe user unlock listener");
+    std::lock_guard<std::mutex> lock(subscriberLock_);
+    if (userUnlockSubscriber_ != nullptr) {
+        ENGINE_LOGI("User unlock listener is already registered");
+        return;
     }
+
+    EventFwk::MatchingSkills matchingSkills;
+    matchingSkills.AddEvent(EventFwk::CommonEventSupport::COMMON_EVENT_USER_UNLOCKED);
+    EventFwk::CommonEventSubscribeInfo subscribeInfo(matchingSkills);
+    const auto weakThis = weak_from_this();
+    userUnlockSubscriber_ = std::make_shared<UserUnlockSubscriber>(
+        subscribeInfo,
+        [weakThis]() {
+            const auto observer = weakThis.lock();
+            if (observer == nullptr) {
+                ENGINE_LOGI("User unlock callback skipped because observer is expired");
+                return;
+            }
+            observer->TryNotifyUnlocked();
+        });
+    if (!EventFwk::CommonEventManager::SubscribeCommonEvent(userUnlockSubscriber_)) {
+        ENGINE_LOGE("Failed to subscribe user unlock listener");
+        userUnlockSubscriber_ = nullptr;
+        return;
+    }
+
+    ENGINE_LOGI("Subscribe user unlock listener success");
 }
 
 void UpdateUserUnlockObserver::UnregisterUserUnlockListener()
 {
-    listener_->Unregister();
+    std::lock_guard<std::mutex> lock(subscriberLock_);
+    if (userUnlockSubscriber_ == nullptr) {
+        ENGINE_LOGI("User unlock listener is already null");
+        return;
+    }
+
+    if (!EventFwk::CommonEventManager::UnSubscribeCommonEvent(userUnlockSubscriber_)) {
+        ENGINE_LOGE("Failed to unsubscribe user unlock listener");
+    } else {
+        ENGINE_LOGI("Unsubscribe user unlock listener success");
+    }
+    userUnlockSubscriber_ = nullptr;
 }
 
 void UpdateUserUnlockObserver::TryNotifyUnlocked()

@@ -19,17 +19,12 @@ user_unlock_include = [ "$user_unlock_root_path/include" ]
 
 user_unlock_src = [
   "$user_unlock_root_path/src/update_user_unlock_observer.cpp",
+  "$user_unlock_root_path/src/user_account_helper.cpp",
 ]
-
-if (defined(global_parts_info) &&
-    defined(global_parts_info.account_os_account)) {
-  user_unlock_src += [ "$user_unlock_root_path/src/user_account_helper.cpp" ]
-} else {
-  user_unlock_src += [ "$user_unlock_root_path/src/user_account_helper_fake.cpp" ]
-}
 
 user_unlock_deps = []
 
 user_unlock_external_deps = [
   "common_event_service:cesfwk_innerkits",
+  "os_account:os_account_innerkits",
 ]
