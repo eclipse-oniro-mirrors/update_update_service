@@ -28,13 +28,8 @@ if (defined(global_parts_info) &&
 if (defined(global_parts_info) &&
     defined(global_parts_info.multimedia_audio_framework)) {
   device_idle_src += [ "$device_idle_root_path/src/call_state_utils.cpp" ]
-} else {
-  device_idle_src += [ "$device_idle_root_path/src/call_state_utils_fake.cpp" ]
-}
-
-if (defined(global_parts_info) &&
-    defined(global_parts_info.multimedia_audio_framework)) {
   device_idle_src += [ "$device_idle_root_path/src/music_state_utils.cpp" ]
 } else {
+  device_idle_src += [ "$device_idle_root_path/src/call_state_utils_fake.cpp" ]
   device_idle_src += [ "$device_idle_root_path/src/music_state_utils_fake.cpp" ]
 }

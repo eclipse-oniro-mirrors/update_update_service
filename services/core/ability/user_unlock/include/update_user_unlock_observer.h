@@ -20,13 +20,26 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 
+#include "common_event_subscriber.h"
 #include "user_account_helper.h"
 
 namespace OHOS {
 namespace UpdateService {
-class UserUnlockListener;
+class UserUnlockSubscriber final : public EventFwk::CommonEventSubscriber {
+public:
+    using OnUnlockedCallback = std::function<void()>;
+
+    UserUnlockSubscriber(const EventFwk::CommonEventSubscribeInfo &subscribeInfo, OnUnlockedCallback onUnlocked);
+    ~UserUnlockSubscriber() override;
+
+    void OnReceiveEvent(const EventFwk::CommonEventData &data) override;
+
+private:
+    OnUnlockedCallback onUnlocked_;
+};
 
 class UpdateUserUnlockObserver : public std::enable_shared_from_this<UpdateUserUnlockObserver> {
 public:
@@ -48,7 +61,8 @@ private:
     UnlockCallback onUnlocked_;
     UserAccountHelper userAccountHelper_;
     std::atomic<bool> initialized_ = false;
-    std::shared_ptr<UserUnlockListener> listener_ = nullptr;
+    std::mutex subscriberLock_;
+    std::shared_ptr<EventFwk::CommonEventSubscriber> userUnlockSubscriber_ = nullptr;
 };
 } // namespace UpdateService
 } // namespace OHOS

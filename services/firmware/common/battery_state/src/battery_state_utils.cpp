@@ -23,13 +23,6 @@ namespace UpdateService {
 bool BatteryStateUtils::IsBatteryEnough(int32_t batteryLimit)
 {
     auto& batteryClient = OHOS::PowerMgr::BatterySrvClient::GetInstance();
-    auto chargeState = batteryClient.GetChargingStatus();
-    if (chargeState == OHOS::PowerMgr::BatteryChargeState::CHARGE_STATE_ENABLE ||
-        chargeState == OHOS::PowerMgr::BatteryChargeState::CHARGE_STATE_FULL) {
-        FIRMWARE_LOGI("Device is charging (chargeState=%{public}d), skip battery check",
-            static_cast<int32_t>(chargeState));
-        return true;
-    }
     int32_t capacity = batteryClient.GetCapacity();
     FIRMWARE_LOGI("Current battery capacity: %{public}d, required limit: %{public}d", capacity, batteryLimit);
     return capacity >= batteryLimit;

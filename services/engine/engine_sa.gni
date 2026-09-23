@@ -208,10 +208,6 @@ if (defined(global_parts_info.multimedia_audio_framework)) {
   sa_external_deps += [ "audio_framework:audio_sasdk" ]
 }
 
-if (defined(global_parts_info.account_os_account)) {
-  sa_external_deps += [ "os_account:os_account_innerkits" ]
-}
-
 sa_external_deps += firmware_external_deps
 sa_external_deps += bell_utils_external_deps
 sa_external_deps += sqlite_external_deps
