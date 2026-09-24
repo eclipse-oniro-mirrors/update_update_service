@@ -32,7 +32,7 @@ namespace UpdateService {
 FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor()
 {
     GetTask();
-    downloadProgress_.percent = tasks_.progress;
+    downloadProgress_.percent = static_cast<uint32_t>(tasks_.progress);
     downloadProgress_.status = tasks_.status;
     FIRMWARE_LOGI("FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor, "
         "status: %{public}d progress: %{public}d",
