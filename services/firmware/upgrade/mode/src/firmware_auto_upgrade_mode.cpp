@@ -113,7 +113,7 @@ FirmwareStep FirmwareAutoUpgradeMode::GetStepAfterCheck()
         StringUtils::GetBoolStr(isCheckFail).c_str(), StringUtils::GetBoolStr(isSame).c_str(),
         StringUtils::GetBoolStr(hasNewVersion).c_str());
     if (isCheckFail) {
-        FIRMWARE_LOGI("GetStepAfterInit network unavailable, save need retry check true");
+        FIRMWARE_LOGI("GetStepAfterCheck check failed, save need retry check true");
         FirmwarePreferencesUtil::GetInstance()->SaveNeedRetryCheckFlag(true);
         return FirmwareStep::COMPLETE;
     }
