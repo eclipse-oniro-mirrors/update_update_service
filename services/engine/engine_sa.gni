@@ -206,6 +206,10 @@ if (defined(global_parts_info.multimedia_audio_framework)) {
   sa_external_deps += [ "audio_framework:audio_client" ]
 }
 
+if (target_platform == "pc") {
+  sa_external_deps += [ "security_guard:libsg_collect_sdk" ]
+}
+
 sa_external_deps += firmware_external_deps
 sa_external_deps += bell_utils_external_deps
 sa_external_deps += sqlite_external_deps
@@ -231,6 +235,9 @@ if (preference_native_preferences_enable) {
 }
 if (update_service_enable_run_on_demand_qos) {
   sa_defines += [ "UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS" ]
+}
+if (target_platform == "pc") {
+  sa_defines += [ "OPEN_PC_AUDIT_ENABLE" ]
 }
 sa_defines += sqlite_defines
 

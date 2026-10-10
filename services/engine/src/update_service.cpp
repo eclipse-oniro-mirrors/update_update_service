@@ -26,6 +26,12 @@
 #include "access_manager.h"
 #include "access_token.h"
 #include "config_parse.h"
+
+#ifdef OPEN_PC_AUDIT_ENABLE
+#include "cJSON.h"
+#include "sg_collect_client.h"
+#endif
+
 #include "dupdate_net_manager.h"
 #include "firmware_common.h"
 #include "firmware_manager.h"
@@ -582,6 +588,8 @@ int32_t UpdateService::PermissionCheck(uint32_t code)
 
     if (IsResetDisabledByMdm(code)) {
         ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
+        int32_t ret = ReportResetAuditEvent();
+        ENGINE_LOGI("ReportResetAuditEvent error, ret = %{public}d", ret);
         return INT_MDM_DISABLE_RESET;
     }
 
@@ -671,6 +679,51 @@ bool UpdateService::IsResetDisabledByMdm(uint32_t code)
         return OHOS::system::GetBoolParameter(MDM_DISABLE_RESET_PARA.data(), false);
     }
     return false;
+}
+
+int32_t UpdateService::ReportResetAuditEvent()
+{
+#if !defined(OPEN_PC_AUDIT_ENABLE)
+    return INT_CALL_SUCCESS;
+#else
+    constexpr int64_t eventId = 0x36000001;
+    pid_t pid = getpid();
+    cJSON *callPkgJson = cJSON_CreateObject();
+    if (callPkgJson == nullptr) {
+        ENGINE_LOGE("callPkgJson create fail");
+        return -1;
+    }
+    std::string pidStr = std::to_string(pid);
+    if (!cJSON_AddNumberToObject(callPkgJson, "type", 0) ||
+        !cJSON_AddNumberToObject(callPkgJson, "subType", -1) ||
+        !cJSON_AddStringToObject(callPkgJson, "caller", pidStr.c_str()) ||
+        !cJSON_AddStringToObject(callPkgJson, "objectInfo", "")) {
+        ENGINE_LOGE("callPkgJson add fail");
+        cJSON_Delete(callPkgJson);
+        return -1;
+    }
+    char *buff = cJSON_PrintUnformatted(callPkgJson);
+    std::string reportContent = "";
+    if (buff != nullptr) {
+        reportContent = std::string(buff);
+        cJSON_free(buff);
+    }
+    cJSON_Delete(callPkgJson);
+    if (reportContent.empty()) {
+        ENGINE_LOGE("cJSON_PrintUnformatted fail, skip report");
+        return -1;
+    }
+    std::string version = "1.0";
+    std::shared_ptr<OHOS::Security::SecurityGuard::EventInfo> eventInfo =
+        std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, version, reportContent);
+    int32_t ret = OHOS::Security::SecurityGuard::NativeDataCollectKit::ReportSecurityInfo(eventInfo);
+    if (ret != 0) {
+        ENGINE_LOGE("ReportSecurityInfo ret: %{public}d", ret);
+    } else {
+        ENGINE_LOGI("ReportSecurityInfo success");
+    }
+    return ret;
+#endif
 }
 } // namespace UpdateService
 } // namespace OHOS

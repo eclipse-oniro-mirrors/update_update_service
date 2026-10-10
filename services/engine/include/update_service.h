@@ -136,6 +136,7 @@ private:
     bool IsPermissionGranted(uint32_t code);
     int32_t PermissionCheck(uint32_t code);
     bool IsResetDisabledByMdm(uint32_t code);
+    int32_t ReportResetAuditEvent();
 
 #ifndef UPDATER_UT
 private:
