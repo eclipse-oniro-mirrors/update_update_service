@@ -27,7 +27,7 @@
 #include "access_token.h"
 #include "config_parse.h"
 
-#ifdef OPEN_PC_AUDIT_ENABLE
+#ifdef AUDIT_FEATRUE_ENABLE
 #include "cJSON.h"
 #include "sg_collect_client.h"
 #endif
@@ -683,17 +683,16 @@ bool UpdateService::IsResetDisabledByMdm(uint32_t code)
 
 int32_t UpdateService::ReportResetAuditEvent()
 {
-#if !defined(OPEN_PC_AUDIT_ENABLE)
+#if !defined(AUDIT_FEATRUE_ENABLE)
     return INT_CALL_SUCCESS;
 #else
     constexpr int64_t eventId = 0x36000001;
-    pid_t pid = getpid();
     cJSON *callPkgJson = cJSON_CreateObject();
     if (callPkgJson == nullptr) {
         ENGINE_LOGE("callPkgJson create fail");
         return -1;
     }
-    std::string pidStr = std::to_string(pid);
+    std::string pidStr = std::to_string(getpid());
     if (!cJSON_AddNumberToObject(callPkgJson, "type", 0) ||
         !cJSON_AddNumberToObject(callPkgJson, "subType", -1) ||
         !cJSON_AddStringToObject(callPkgJson, "caller", pidStr.c_str()) ||
@@ -703,25 +702,22 @@ int32_t UpdateService::ReportResetAuditEvent()
         return -1;
     }
     char *buff = cJSON_PrintUnformatted(callPkgJson);
-    std::string reportContent = "";
-    if (buff != nullptr) {
-        reportContent = std::string(buff);
-        cJSON_free(buff);
+    if (buff == nullptr) {
+        ENGINE_LOGE("cJSON_PrintUnformatted fail");
+        cJSON_Delete(callPkgJson);
+        return -1;
     }
+    std::string reportContent(buff);
+    cJSON_free(buff);
     cJSON_Delete(callPkgJson);
     if (reportContent.empty()) {
         ENGINE_LOGE("cJSON_PrintUnformatted fail, skip report");
         return -1;
     }
-    std::string version = "1.0";
     std::shared_ptr<OHOS::Security::SecurityGuard::EventInfo> eventInfo =
-        std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, version, reportContent);
+        std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, "1.0", reportContent);
     int32_t ret = OHOS::Security::SecurityGuard::NativeDataCollectKit::ReportSecurityInfo(eventInfo);
-    if (ret != 0) {
-        ENGINE_LOGE("ReportSecurityInfo ret: %{public}d", ret);
-    } else {
-        ENGINE_LOGI("ReportSecurityInfo success");
-    }
+    ENGINE_CHECK(ret == 0, return ret, "ReportSecurityInfo fail");
     return ret;
 #endif
 }
