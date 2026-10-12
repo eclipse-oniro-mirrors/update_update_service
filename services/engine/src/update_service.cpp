@@ -564,11 +564,34 @@ void UpdateService::OnStop(const SystemAbilityOnDemandReason &stopReason)
     ENGINE_LOGI("UpdaterService OnStop end");
 }
 
+namespace {
+// 恢复出厂、刷包和包校验接口需要在用户解锁前（开机向导阶段）可调用。
+constexpr uint32_t UNLOCK_EXEMPT_CODES[] = {
+    static_cast<uint32_t>(UpdaterSaInterfaceCode::FACTORY_RESET),
+    static_cast<uint32_t>(UpdaterSaInterfaceCode::APPLY_NEW_VERSION),
+    static_cast<uint32_t>(UpdaterSaInterfaceCode::VERIFY_UPGRADE_PACKAGE),
+    static_cast<uint32_t>(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
+    static_cast<uint32_t>(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET),
+    static_cast<uint32_t>(UpdaterSaInterfaceCode::GET_DEEP_FACTORY_RESET_INFO),
+};
+} // namespace
+
+bool UpdateService::IsUserUnlockRequired(uint32_t code)
+{
+    for (uint32_t exempt : UNLOCK_EXEMPT_CODES) {
+        if (code == exempt) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int32_t UpdateService::CallbackEnter(uint32_t code)
 {
     // 未加载接口扩展能力，执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsModuleLoaded()) {
-        if (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked()) {
+        if (IsUserUnlockRequired(code) &&
+            (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked())) {
             ENGINE_LOGE("CallbackEnter forbidden, active user is not unlocked, code %{public}u", code);
             return INT_FORBIDDEN;
         }
@@ -578,10 +601,6 @@ int32_t UpdateService::CallbackEnter(uint32_t code)
 
     // 加载了接口扩展能力， 但是当前调用接口不是拓展接口，还是执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsMapFuncExist(code)) {
-        if (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked()) {
-            ENGINE_LOGE("CallbackEnter forbidden, active user is not unlocked, code %{public}u", code);
-            return INT_FORBIDDEN;
-        }
         ENGINE_LOGE("CallbackEnter, code %{public}u not extended", code);
         return PermissionCheck(code);
     }

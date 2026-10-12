@@ -30,7 +30,6 @@
 #include "system_ability.h"
 
 #include "update_user_unlock_observer.h"
-#include "user_account_helper.h"
 #include "update_service_impl_manager.h"
 #include "update_service_stub.h"
 
@@ -172,7 +171,7 @@ private:
     std::mutex clientProxyMapLock_;
     std::map<UpgradeInfo, ClientProxy> clientProxyMap_;
     std::shared_ptr<UpdateUserUnlockObserver> userUnlockObserver_ = nullptr;
-    UserAccountHelper userAccountHelper_;
+    static bool IsUserUnlockRequired(uint32_t code);
     static sptr<UpdateService> updateService_;
     std::shared_ptr<UpdateServiceImplManager> updateImplMgr_ = nullptr;
 };
