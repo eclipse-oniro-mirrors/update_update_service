@@ -565,7 +565,6 @@ void UpdateService::OnStop(const SystemAbilityOnDemandReason &stopReason)
 }
 
 namespace {
-// 恢复出厂、刷包和包校验接口需要在用户解锁前（开机向导阶段）可调用。
 constexpr uint32_t UNLOCK_EXEMPT_CODES[] = {
     static_cast<uint32_t>(UpdaterSaInterfaceCode::FACTORY_RESET),
     static_cast<uint32_t>(UpdaterSaInterfaceCode::APPLY_NEW_VERSION),
