@@ -17,6 +17,7 @@
 
 #include <dlfcn.h>
 #include <unistd.h>
+#include <unordered_set>
 #include <updater_sa_ipc_interface_code.h>
 
 #include "iservice_registry.h"
@@ -564,25 +565,17 @@ void UpdateService::OnStop(const SystemAbilityOnDemandReason &stopReason)
     ENGINE_LOGI("UpdaterService OnStop end");
 }
 
-namespace {
-constexpr uint32_t UNLOCK_EXEMPT_CODES[] = {
-    static_cast<uint32_t>(UpdaterSaInterfaceCode::FACTORY_RESET),
-    static_cast<uint32_t>(UpdaterSaInterfaceCode::APPLY_NEW_VERSION),
-    static_cast<uint32_t>(UpdaterSaInterfaceCode::VERIFY_UPGRADE_PACKAGE),
-    static_cast<uint32_t>(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
-    static_cast<uint32_t>(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET),
-    static_cast<uint32_t>(UpdaterSaInterfaceCode::GET_DEEP_FACTORY_RESET_INFO),
-};
-} // namespace
-
 bool UpdateService::IsUserUnlockRequired(uint32_t code)
 {
-    for (uint32_t exempt : UNLOCK_EXEMPT_CODES) {
-        if (code == exempt) {
-            return false;
-        }
-    }
-    return true;
+    static const std::unordered_set<uint32_t> exemptCodes {
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::FACTORY_RESET),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::APPLY_NEW_VERSION),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::VERIFY_UPGRADE_PACKAGE),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::GET_DEEP_FACTORY_RESET_INFO),
+    };
+    return exemptCodes.find(code) == exemptCodes.end();
 }
 
 int32_t UpdateService::CallbackEnter(uint32_t code)
