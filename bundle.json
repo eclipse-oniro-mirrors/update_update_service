@@ -62,7 +62,7 @@
         "runtime_core",
         "jsoncpp",
         "taihe_ffi_gen",
-        "ffrt"
+        "ffrt",
         "security_guard"
       ],
       "third_party": []
