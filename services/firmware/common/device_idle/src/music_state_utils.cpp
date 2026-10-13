@@ -15,22 +15,20 @@
 
 #include "music_state_utils.h"
 
-#include "audio_info.h"
-#include "audio_system_manager.h"
+#include "audio_sasdk.h"
 #include "firmware_log.h"
 
 namespace OHOS {
 namespace UpdateService {
 bool MusicStateUtils::IsMusicActive()
 {
-    auto* audioMgr = OHOS::AudioStandard::AudioSystemManager::GetInstance();
+    auto* audioMgr = AudioStandard::AudioSaSdk::GetInstance();
     if (audioMgr == nullptr) {
         FIRMWARE_LOGI("MusicStateUtils::IsMusicActive audioMgr is null");
         return false;
     }
-    bool isActive = audioMgr->IsStreamActive(OHOS::AudioStandard::STREAM_MUSIC);
-    FIRMWARE_LOGI("MusicStateUtils::IsMusicActive %{public}s", isActive ? "true" : "false");
-    return isActive;
+
+    return audioMgr->IsStreamActive(AudioStandard::SaSdkAudioVolumeType::SASDK_STREAM_MUSIC);
 }
 } // namespace UpdateService
 } // namespace OHOS

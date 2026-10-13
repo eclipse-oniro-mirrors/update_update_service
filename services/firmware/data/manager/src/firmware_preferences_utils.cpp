@@ -65,5 +65,30 @@ void FirmwarePreferencesUtil::SaveNightUpgradeSwitch(bool value)
 {
     SaveBool("night_upgrade_switch", value);
 }
+
+bool FirmwarePreferencesUtil::IsNeedRetryCheck()
+{
+    return ObtainBool("need_retry_check", false);
+}
+
+bool FirmwarePreferencesUtil::SaveNeedRetryCheckFlag(bool needRetry)
+{
+    return SaveBool("need_retry_check", needRetry);
+}
+
+bool FirmwarePreferencesUtil::GetBellStatus()
+{
+    return ObtainBool("restore_boot_animation_sound", false);
+}
+
+bool FirmwarePreferencesUtil::SaveBellStatus(bool isBellOn)
+{
+    return SaveBool("restore_boot_animation_sound", isBellOn);
+}
+
+bool FirmwarePreferencesUtil::RemoveBellStatus()
+{
+    return Remove("restore_boot_animation_sound");
+}
 } // namespace UpdateService
 } // namespace OHOS
