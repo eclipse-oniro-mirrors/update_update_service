@@ -18,7 +18,6 @@
 #include <cstdlib>
 #include <thread>
 
-#include "bell_utils.h"
 #include "config_parse.h"
 #include "download_task_manager.h"
 #include "dupdate_errno.h"
@@ -96,15 +95,6 @@ void FirmwareManager::DelayInit(StartupReason startupReason)
         // 重启启动，延时5秒，等待系统初始化完再恢复周期提醒alarm | 执行升级结果判断  避免出现通知hap拉不起的问题
         sleep(INIT_DELAY_TIME);
         eventType = CommonEventType::BOOT_COMPLETE;
-        if (BellUtils::IsSupported() &&
-            preferencesUtil_->ObtainBool(Firmware::RESTORE_BOOT_ANIMATION_SOUND, false)) {
-            BellUtils::TurnOnBell();
-            // 恢复后清除标记，防止普通启动重复修改铃声状态。
-            if (!preferencesUtil_->Remove(Firmware::RESTORE_BOOT_ANIMATION_SOUND)) {
-                FIRMWARE_LOGE("Remove boot animation sound restore flag failed");
-            }
-            FIRMWARE_LOGI("Restore boot animation sound after night upgrade reboot");
-        }
     }
 
     // 以下两种情况会向OUC发送初始启动消息：
@@ -118,7 +108,6 @@ void FirmwareManager::DelayInit(StartupReason startupReason)
 void FirmwareManager::RegisterAllListeners()
 {
     DelayedSingleton<FirmwareEventListener>::GetInstance()->RegisterNetChangedListener();
-    FirmwareAutoUpgradeAlarmManager::GetInstance()->RefreshAutoUpgradeAlarm();
 }
 
 void FirmwareManager::RestoreUpdate()

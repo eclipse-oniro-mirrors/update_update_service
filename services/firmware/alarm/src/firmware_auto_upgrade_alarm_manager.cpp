@@ -18,6 +18,7 @@
 #include "alarm_timer_utils.h"
 #include "constant.h"
 #include "dupdate_net_manager.h"
+#include "firmware_constant.h"
 #include "firmware_event_manager.h"
 #include "firmware_log.h"
 #include "string_utils.h"
@@ -67,7 +68,10 @@ bool FirmwareAutoUpgradeAlarmManager::IsNeedIgnoreDuration(int32_t setDuration, 
 void FirmwareAutoUpgradeAlarmManager::RefreshAutoUpgradeAlarm(CommonEventType event)
 {
     FIRMWARE_LOGI("Firmware RefreshAutoUpgradeAlarmEvent,event: %{public}d", event);
-    RegisterAutoUpgradeTime(AutoUpgradeTimeRefreshType::EVENT);
+    if (event == CommonEventType::NET_CHANGED || event == CommonEventType::BOOT_COMPLETE ||
+        event == CommonEventType::PROCESS_INIT) {
+        RegisterAutoUpgradeTime(AutoUpgradeTimeRefreshType::EVENT);
+    }
 }
 
 int64_t FirmwareAutoUpgradeAlarmManager::GetAutoUpgradeTime()
@@ -85,6 +89,11 @@ void FirmwareAutoUpgradeAlarmManager::RegisterAutoUpgradeTime(AutoUpgradeTimeRef
     // 设置下次搜包定时器
     int64_t duration = GetEffectiveAutoUpgradeDuration(); // 3600秒
     int64_t autoUpgradeTime = preferencesUtil_->GetAutoUpgradeTime();
+    bool isNeedRetry = preferencesUtil_->IsNeedRetryCheck();
+    FIRMWARE_LOGI("Firmware RegisterAutoUpgradeTime begin,refreshType: %{public}d,isNeedRetry: %{public}s,"
+        "timerId: %{public}s,autoUpgradeTime: %{public}s",
+        static_cast<int32_t>(refreshType), StringUtils::GetBoolStr(isNeedRetry).c_str(),
+        std::to_string(autoTimerId_).c_str(), TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str());
     int64_t autoUpgradeTimeCalculateResult = autoUpgradeTime;
     CalculateAutoUpgradeTime(refreshType, autoUpgradeTimeCalculateResult, duration);
     if (autoUpgradeTime == autoUpgradeTimeCalculateResult && autoTimerId_ > 0) {
@@ -130,9 +139,25 @@ void FirmwareAutoUpgradeAlarmManager::HandleNetChange(int64_t currentTime, int64
     FIRMWARE_LOGI("Firmware HandleNetChange,autoUpgradeTime: %{public}s,lastRegisterTime: %{public}s",
         TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str(), TimeUtils::GetPrintTimeStr(lastRegisterTime).c_str());
 
+    bool isNeedRetry = preferencesUtil_->IsNeedRetryCheck();
+    FIRMWARE_LOGI("Firmware HandleNetChange,isNeedRetry: %{public}s",
+        StringUtils::GetBoolStr(isNeedRetry).c_str());
     if (currentTime >= autoUpgradeTime || currentTime < lastRegisterTime) {
+        FIRMWARE_LOGI("Firmware HandleNetChange choose timer available branch");
         autoUpgradeTime = currentTime + TIMER_AVAILABLE_INTERVAL;
+        preferencesUtil_->SaveNeedRetryCheckFlag(false);
+        return;
     }
+
+    if (isNeedRetry) {
+        FIRMWARE_LOGI("Firmware HandleNetChange choose retry random branch");
+        autoUpgradeTime =
+            currentTime + TimeUtils::GetRandTime(Constant::FIVE_MINUTES_SECONDS, Constant::ONE_HOUR_SECONDS);
+        preferencesUtil_->SaveNeedRetryCheckFlag(false);
+        return;
+    }
+
+    FIRMWARE_LOGI("Firmware HandleNetChange keep original auto upgrade time");
 }
 
 void FirmwareAutoUpgradeAlarmManager::CancelAutoUpgradeAlarm()

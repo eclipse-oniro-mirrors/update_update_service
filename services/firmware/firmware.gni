@@ -68,6 +68,7 @@ firmware_src = [
   "$firmware_root_path/upgrade/flow/src/firmware_flow_manager.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_manager.cpp",
   "$firmware_root_path/upgrade/flow/src/firmware_event_manager.cpp",
+  "$firmware_root_path/upgrade/flow/src/firmware_upgrade_processor.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_install.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_updater_install.cpp",
   "$firmware_root_path/upgrade/install/src/firmware_install_factory.cpp",
