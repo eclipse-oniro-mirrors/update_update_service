@@ -589,7 +589,7 @@ int32_t UpdateService::PermissionCheck(uint32_t code)
     if (IsResetDisabledByMdm(code)) {
         ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
         int32_t ret = ReportResetAuditEvent();
-        ENGINE_LOGI("ReportResetAuditEvent error, ret = %{public}d", ret);
+        ENGINE_LOGI("ReportResetAuditEvent result = %{public}d", ret);
         return INT_MDM_DISABLE_RESET;
     }
 
