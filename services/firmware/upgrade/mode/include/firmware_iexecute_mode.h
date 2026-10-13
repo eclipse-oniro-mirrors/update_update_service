@@ -41,7 +41,6 @@ public:
     virtual void SetDownloadEvent(const std::string &downloadTaskId, EventId eventId) {}
     virtual void SetCheckResult(CheckStatus status, const Duration &duration,
         const std::vector<FirmwareComponent> &componentList, const CheckAndAuthInfo &checkAndAuthInfo){};
-    virtual void SetDownloadProgress(const Progress &progress){};
     virtual void SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo){};
     virtual void SetInstallResult(const InstallCallbackInfo &installCallbackInfo){};
     virtual void SetApplyResult(bool isSuccess){};

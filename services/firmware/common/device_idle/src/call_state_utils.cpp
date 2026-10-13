@@ -15,25 +15,18 @@
 
 #include "call_state_utils.h"
 
-#include "call_manager_base.h"
-#include "call_manager_client.h"
+#include "audio_system_manager.h"
 #include "firmware_log.h"
-#include "system_ability_definition.h"
 
 namespace OHOS {
 namespace UpdateService {
 bool CallStateUtils::HasCall()
 {
-    std::shared_ptr<OHOS::Telephony::CallManagerClient> callClient =
-        OHOS::DelayedSingleton<OHOS::Telephony::CallManagerClient>::GetInstance();
-    if (callClient == nullptr) {
-        FIRMWARE_LOGI("CallStateUtils::HasCall callClient is null");
-        return false;
-    }
-    callClient->Init(TELEPHONY_CALL_MANAGER_SYS_ABILITY_ID);
-    bool hasCall = callClient->HasCall(true);
-    FIRMWARE_LOGI("CallStateUtils::HasCall %{public}s", hasCall ? "true" : "false");
-    return hasCall;
+    auto audioScene = AudioStandard::AudioSystemManager::GetInstance()->GetAudioScene();
+    FIRMWARE_LOGI("CallStateUtils::HasCall audioScene is : %{public}d ", static_cast<int32_t>(audioScene));
+    return audioScene == AudioStandard::AudioScene::AUDIO_SCENE_RINGING ||
+           audioScene == AudioStandard::AudioScene::AUDIO_SCENE_PHONE_CALL ||
+           audioScene == AudioStandard::AudioScene::AUDIO_SCENE_PHONE_CHAT;
 }
 } // namespace UpdateService
 } // namespace OHOS

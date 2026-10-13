@@ -30,7 +30,6 @@ public:
     FirmwareDownloadDataProcessor();
     ~FirmwareDownloadDataProcessor();
 
-    void SetDownloadProgress(const Progress &progress);
     Progress GetDownloadProgress();
     bool IsDownloadSuccess();
     bool IsSpaceEnough(int64_t &requireTotalSize);

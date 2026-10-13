@@ -33,7 +33,8 @@ namespace UpdateService {
 class BaseCallbackUtils {
 public:
     void NotifyEvent(const std::string &versionDigestInfo, EventId eventId, UpgradeStatus status,
-        const ErrorMessage &errorMessage = {}, const std::vector<VersionComponent> &versionComponents = {});
+        const ErrorMessage &errorMessage = {}, const std::vector<VersionComponent> &versionComponents = {},
+        int32_t progress = 0);
     void ProgressCallback(const std::string &versionDigestInfo, const Progress &progress);
 
 protected:

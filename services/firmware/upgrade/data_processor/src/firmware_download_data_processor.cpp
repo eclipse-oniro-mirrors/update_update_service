@@ -15,6 +15,8 @@
 
 #include "firmware_download_data_processor.h"
 
+#include <algorithm>
+
 #include "constant.h"
 #include "firmware_callback_utils.h"
 #include "firmware_component_operator.h"
@@ -29,7 +31,12 @@ namespace OHOS {
 namespace UpdateService {
 FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor()
 {
-    FIRMWARE_LOGD("FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor");
+    GetTask();
+    downloadProgress_.percent = static_cast<uint32_t>(tasks_.progress);
+    downloadProgress_.status = tasks_.status;
+    FIRMWARE_LOGI("FirmwareDownloadDataProcessor::FirmwareDownloadDataProcessor, "
+        "status: %{public}d progress: %{public}d",
+        downloadProgress_.status, downloadProgress_.percent);
 }
 
 FirmwareDownloadDataProcessor::~FirmwareDownloadDataProcessor()
@@ -64,7 +71,9 @@ bool FirmwareDownloadDataProcessor::IsSpaceEnough(int64_t &requireTotalSize)
 void FirmwareDownloadDataProcessor::SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo)
 {
     GetTask();
+    uint32_t recordedProgress = downloadProgress_.percent;
     downloadProgress_ = callbackInfo.taskProgress;
+    downloadProgress_.percent = std::max(downloadProgress_.percent, recordedProgress);
     FIRMWARE_LOGI("SetDownloadProgress status: %{public}d progress: %{public}d", downloadProgress_.status,
         downloadProgress_.percent);
 
@@ -77,7 +86,7 @@ void FirmwareDownloadDataProcessor::SetDownloadCallbackInfo(const FirmwareDownlo
     }
     taskOperator_.UpdateProgressByTaskId(tasks_.taskId, downloadProgress_.status, CAST_INT(downloadProgress_.percent));
 
-    FirmwareCallbackUtils::GetInstance()->ProgressCallback(tasks_.taskId, callbackInfo.taskProgress);
+    FirmwareCallbackUtils::GetInstance()->ProgressCallback(tasks_.taskId, downloadProgress_);
 }
 
 void FirmwareDownloadDataProcessor::SetDownloadEvent(const std::string &downloadTaskId, EventId eventId)
@@ -97,21 +106,13 @@ void FirmwareDownloadDataProcessor::SetDownloadEvent(const std::string &download
         FIRMWARE_LOGI("SetDownloadEvent handle download resume");
         taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
         FirmwareCallbackUtils::GetInstance()->NotifyEvent(tasks_.taskId, EventId::EVENT_DOWNLOAD_RESUME,
-            UpgradeStatus::DOWNLOADING);
+            UpgradeStatus::DOWNLOADING, {}, {}, tasks_.progress);
     }
 }
 
 void FirmwareDownloadDataProcessor::GetTask()
 {
     FirmwareTaskOperator().QueryTask(tasks_);
-}
-
-void FirmwareDownloadDataProcessor::SetDownloadProgress(const Progress &progress)
-{
-    FIRMWARE_LOGI("SetDownloadProgress status: %{public}d progress: %{public}d", progress.status, progress.percent);
-    downloadProgress_ = progress;
-    GetTask();
-    DelayedSingleton<FirmwareCallbackUtils>::GetInstance()->ProgressCallback(tasks_.taskId, progress);
 }
 
 Progress FirmwareDownloadDataProcessor::GetDownloadProgress()

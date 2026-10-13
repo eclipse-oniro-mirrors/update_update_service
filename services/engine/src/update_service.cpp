@@ -17,6 +17,7 @@
 
 #include <dlfcn.h>
 #include <unistd.h>
+#include <unordered_set>
 #include <updater_sa_ipc_interface_code.h>
 
 #include "iservice_registry.h"
@@ -28,7 +29,6 @@
 #include "config_parse.h"
 #include "dupdate_net_manager.h"
 #include "firmware_common.h"
-#include "firmware_manager.h"
 #include "ipc_skeleton.h"
 #include "module_manager.h"
 #include "parameter.h"
@@ -499,6 +499,14 @@ void UpdateService::SetThreadPrio(int priority)
 }
 #endif
 
+void UpdateService::InitBusinessAfterUnlock()
+{
+    ENGINE_LOGI("Initialize NetManager after user unlock");
+    DelayedSingleton<NetManager>::GetInstance()->Init();
+    ENGINE_LOGI("Start StartupManager after user unlock");
+    DelayedSingleton<StartupManager>::GetInstance()->Start();
+}
+
 void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
     ENGINE_LOGI("UpdaterService oh OnStart, startReason name %{public}s, id %{public}d, value %{public}s",
@@ -520,11 +528,13 @@ void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
 #endif
 
     if (!ModuleManager::GetInstance().IsModuleLoaded()) {
-        ENGINE_LOGI("IsModuleLoaded false, init updateservice_sa");
-        DelayedSingleton<NetManager>::GetInstance()->Init();
-
-        // 动态启停流程启动
-        DelayedSingleton<StartupManager>::GetInstance()->Start();
+        if (userUnlockObserver_ == nullptr) {
+            userUnlockObserver_ = std::make_shared<UpdateUserUnlockObserver>(
+                [this]() {
+                    InitBusinessAfterUnlock();
+                });
+        }
+        userUnlockObserver_->Start();
     }
 
     if (Publish(this)) {
@@ -547,14 +557,36 @@ int32_t UpdateService::OnIdle(const SystemAbilityOnDemandReason &idleReason)
 
 void UpdateService::OnStop(const SystemAbilityOnDemandReason &stopReason)
 {
-    ENGINE_LOGI("UpdaterService OnStop");
+    ENGINE_LOGI("UpdaterService OnStop begin");
+    if (userUnlockObserver_ != nullptr) {
+        userUnlockObserver_->Stop();
+    }
     ModuleManager::GetInstance().HandleOnStartOnStopFunc("OnStop", stopReason);
+    ENGINE_LOGI("UpdaterService OnStop end");
+}
+
+bool UpdateService::IsUserUnlockRequired(uint32_t code)
+{
+    static const std::unordered_set<uint32_t> exemptCodes {
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::FACTORY_RESET),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::APPLY_NEW_VERSION),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::VERIFY_UPGRADE_PACKAGE),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::FORCE_FACTORY_RESET),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::DEEP_FACTORY_RESET),
+        static_cast<uint32_t>(UpdaterSaInterfaceCode::GET_DEEP_FACTORY_RESET_INFO),
+    };
+    return exemptCodes.find(code) == exemptCodes.end();
 }
 
 int32_t UpdateService::CallbackEnter(uint32_t code)
 {
     // 未加载接口扩展能力，执行UpdateService鉴权动作
     if (!ModuleManager::GetInstance().IsModuleLoaded()) {
+        if (IsUserUnlockRequired(code) &&
+            (userUnlockObserver_ == nullptr || !userUnlockObserver_->HasUserUnlocked())) {
+            ENGINE_LOGE("CallbackEnter forbidden, active user is not unlocked, code %{public}u", code);
+            return INT_FORBIDDEN;
+        }
         ENGINE_LOGI("CallbackEnter, extend module not loaded, code %{public}u", code);
         return PermissionCheck(code);
     }

@@ -54,9 +54,12 @@ DownloadOptions FirmwareDownloadMode::GetDownloadOptions()
     return downloadOptions_;
 }
 
-void FirmwareDownloadMode::SetDownloadProgress(const Progress &progress)
+void FirmwareDownloadMode::SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo)
 {
-    downloadDataProcessor_.SetDownloadProgress(progress);
+}
+
+void FirmwareDownloadMode::SetDownloadEvent(const std::string &downloadTaskId, EventId eventId)
+{
 }
 } // namespace UpdateService
 } // namespace OHOS
