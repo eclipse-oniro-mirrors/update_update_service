@@ -105,7 +105,8 @@ bool FirmwareStreamInstallApplyMode::IsAllowInstall()
         businessError_.AddErrorMessage(CAST_INT(DUPDATE_ERR_DLOAD_REQUEST_FAIL), "download no network!");
         return false;
     }
-    if (!BatteryStateUtils::IsBatteryEnough(MANUAL_UPGRADE_BATTERY_LEVEL)) {
+    if (BatteryStateUtils::IsDeviceHasBattery() &&
+        !BatteryStateUtils::IsBatteryEnough(MANUAL_UPGRADE_BATTERY_LEVEL)) {
         FIRMWARE_LOGE("IsAllowInstall isBatteryEnough is false");
         businessError_.Build(CallResult::FAIL, "install condition fail!");
         businessError_.AddErrorMessage(CAST_INT(DUPDATE_ERR_LOW_BATTERY_LEVEL), "battery is low");
