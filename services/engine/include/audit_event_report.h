@@ -17,6 +17,7 @@
 #define AUDIT_EVENT_REPORT_H
 
 #include <cstdint>
+#include <string>
 
 namespace OHOS {
 namespace UpdateService {
