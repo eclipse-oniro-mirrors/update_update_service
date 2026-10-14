@@ -28,7 +28,6 @@
 #include "access_manager.h"
 #include "access_token.h"
 #include "config_parse.h"
-
 #include "dupdate_net_manager.h"
 #include "firmware_common.h"
 #include "ipc_skeleton.h"

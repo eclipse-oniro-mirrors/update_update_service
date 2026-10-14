@@ -18,10 +18,12 @@
 
 #include <cstdint>
 
-namespace OHOS::UpdateService {
+namespace OHOS {
+namespace UpdateService {
 class AuditEventReport {
 public:
     static int32_t ReportResetAuditEvent();
 };
-} // namespace OHOS::UpdateService
+} // namespace UpdateService
+} // namespace OHOS
 #endif // AUDIT_EVENT_REPORT_H
