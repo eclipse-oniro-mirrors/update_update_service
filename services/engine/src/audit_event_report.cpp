@@ -53,7 +53,10 @@ int32_t AuditEventReport::ReportResetAuditEvent(const std::string caller)
     std::shared_ptr<OHOS::Security::SecurityGuard::EventInfo> eventInfo =
         std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, "1.0", reportContent);
     int32_t ret = OHOS::Security::SecurityGuard::NativeDataCollectKit::ReportSecurityInfo(eventInfo);
-    ENGINE_CHECK(ret == 0, return ret, "ReportSecurityInfo fail");
+    if (ret != 0) {
+        ENGINE_LOGE("ReportSecurityInfo fail");
+        return INT_CALL_FAIL;
+    }
     return INT_CALL_SUCCESS;
 }
 } // namespace UpdateService

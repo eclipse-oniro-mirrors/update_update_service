@@ -87,7 +87,7 @@ if (preference_native_preferences_enable) {
   sa_sources += [ "$updateengine_root_path/services/core/ability/preference/src/preference_utils_empty.cpp" ]
 }
 
-if (audit_feature_enable) {
+if (pc_feature_enable) {
   sa_sources += [ "$updateengine_root_path/services/engine/src/audit_event_report.cpp" ]
 } else {
   sa_sources += [ "$updateengine_root_path/services/engine/src/audit_event_report_fake.cpp" ]
@@ -214,7 +214,7 @@ if (defined(global_parts_info.multimedia_audio_framework)) {
   sa_external_deps += [ "audio_framework:audio_sasdk" ]
 }
 
-if (audit_feature_enable) {
+if (pc_feature_enable) {
   sa_external_deps += [ "security_guard:libsg_collect_sdk" ]
 }
 

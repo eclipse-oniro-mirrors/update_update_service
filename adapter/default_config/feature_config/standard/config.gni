@@ -33,10 +33,10 @@ declare_args() {
   }
 }
 
-# 恢复出厂安全审计弱依赖
+# pc部件弱依赖
 declare_args() {
-  audit_feature_enable = false
+  pc_feature_enable = false
   if (target_platform == "pc") {
-    audit_feature_enable = true
+    pc_feature_enable = true
   }
 }
