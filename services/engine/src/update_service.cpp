@@ -615,7 +615,7 @@ int32_t UpdateService::PermissionCheck(uint32_t code)
 
     if (IsResetDisabledByMdm(code)) {
         ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
-        int32_t ret = AuditEventReport::ReportResetAuditEvent();
+        int32_t ret = AuditEventReport::ReportResetAuditEvent(GetCallingAppId());
         ENGINE_LOGI("ReportResetAuditEvent result = %{public}d", ret);
         return INT_MDM_DISABLE_RESET;
     }
@@ -706,6 +706,24 @@ bool UpdateService::IsResetDisabledByMdm(uint32_t code)
         return OHOS::system::GetBoolParameter(MDM_DISABLE_RESET_PARA.data(), false);
     }
     return false;
+}
+
+std::string UpdateService::GetCallingAppId()
+{
+    OHOS::Security::AccessToken::AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
+    auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
+    if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_HAP) {
+        Security::AccessToken::HapTokenInfo  hapTokenInfo;
+        if (Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo) != 0) {
+            ENGINE_LOGE("Get hap token info error");
+            return "";
+        }
+        return hapTokenInfo.bundleName;
+    }
+    if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_NATIVE) {
+        return std::to_string(IPCSkeleton::GetCallingUid());
+    }
+    return "";
 }
 } // namespace UpdateService
 } // namespace OHOS

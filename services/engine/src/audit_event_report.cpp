@@ -15,46 +15,46 @@
 
 #include "audit_event_report.h"
 
+#include "call_result.h"
 #include "cJSON.h"
 #include "sg_collect_client.h"
 
 namespace OHOS {
 namespace UpdateService {
-int32_t AuditEventReport::ReportResetAuditEvent()
+int32_t AuditEventReport::ReportResetAuditEvent(const std::string caller)
 {
     constexpr int64_t eventId = 0x36000001;
     cJSON *callPkgJson = cJSON_CreateObject();
     if (callPkgJson == nullptr) {
         ENGINE_LOGE("callPkgJson create fail");
-        return -1;
+        return INT_CALL_FAIL;
     }
-    std::string pidStr = std::to_string(getpid());
     if (!cJSON_AddNumberToObject(callPkgJson, "type", 0) ||
         !cJSON_AddNumberToObject(callPkgJson, "subType", -1) ||
-        !cJSON_AddStringToObject(callPkgJson, "caller", pidStr.c_str()) ||
+        !cJSON_AddStringToObject(callPkgJson, "caller", caller.c_str()) ||
         !cJSON_AddStringToObject(callPkgJson, "objectInfo", "")) {
         ENGINE_LOGE("callPkgJson add fail");
         cJSON_Delete(callPkgJson);
-        return -1;
+        return INT_CALL_FAIL;
     }
     char *buff = cJSON_PrintUnformatted(callPkgJson);
     if (buff == nullptr) {
         ENGINE_LOGE("cJSON_PrintUnformatted fail");
         cJSON_Delete(callPkgJson);
-        return -1;
+        return INT_CALL_FAIL;
     }
     std::string reportContent(buff);
     cJSON_free(buff);
     cJSON_Delete(callPkgJson);
     if (reportContent.empty()) {
         ENGINE_LOGE("cJSON_PrintUnformatted fail, skip report");
-        return -1;
+        return INT_CALL_FAIL;
     }
     std::shared_ptr<OHOS::Security::SecurityGuard::EventInfo> eventInfo =
         std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, "1.0", reportContent);
     int32_t ret = OHOS::Security::SecurityGuard::NativeDataCollectKit::ReportSecurityInfo(eventInfo);
     ENGINE_CHECK(ret == 0, return ret, "ReportSecurityInfo fail");
-    return ret;
+    return INT_CALL_SUCCESS;
 }
 } // namespace UpdateService
 } // namespace OHOS

@@ -140,6 +140,7 @@ private:
     int32_t PermissionCheck(uint32_t code);
     bool IsResetDisabledByMdm(uint32_t code);
     void InitBusinessAfterUnlock();
+    static std::string GetCallingAppId();
 
 #ifndef UPDATER_UT
 private:
