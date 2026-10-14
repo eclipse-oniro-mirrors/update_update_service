@@ -16,6 +16,8 @@
 #ifndef AUDIT_EVENT_REPORT_H
 #define AUDIT_EVENT_REPORT_H
 
+#include <cstdint>
+
 namespace OHOS::UpdateService {
 class AuditEventReport {
 public:

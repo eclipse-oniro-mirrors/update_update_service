@@ -17,8 +17,12 @@
 
 #include "update_log.h"
 
+namespace OHOS {
+namespace UpdateService {
 int32_t AuditEventReport::ReportResetAuditEvent()
 {
     ENGINE_LOGI("ReportResetAuditEvent");
     return 0;
 }
+} // namespace UpdateService
+} // namespace OHOS

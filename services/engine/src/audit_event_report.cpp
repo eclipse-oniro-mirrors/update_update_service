@@ -18,6 +18,8 @@
 #include "cJSON.h"
 #include "sg_collect_client.h"
 
+namespace OHOS {
+namespace UpdateService {
 int32_t AuditEventReport::ReportResetAuditEvent()
 {
     constexpr int64_t eventId = 0x36000001;
@@ -54,3 +56,5 @@ int32_t AuditEventReport::ReportResetAuditEvent()
     ENGINE_CHECK(ret == 0, return ret, "ReportSecurityInfo fail");
     return ret;
 }
+} // namespace UpdateService
+} // namespace OHOS
