@@ -32,3 +32,11 @@ declare_args() {
     update_service_online_updater = false
   }
 }
+
+# 恢复出厂安全审计弱依赖
+declare_args() {
+  audit_feature_enable = false
+  if (target_platform == "pc") {
+    audit_feature_enable = true
+  }
+}
