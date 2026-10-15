@@ -32,3 +32,11 @@ declare_args() {
     update_service_online_updater = false
   }
 }
+
+# pc部件弱依赖
+declare_args() {
+  pc_feature_enable = false
+  if (target_platform == "pc") {
+    pc_feature_enable = true
+  }
+}
