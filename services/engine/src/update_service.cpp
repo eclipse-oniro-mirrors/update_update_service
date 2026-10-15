@@ -714,8 +714,9 @@ std::string UpdateService::GetCallingAppId()
     auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
     if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_HAP) {
         Security::AccessToken::HapTokenInfo  hapTokenInfo;
-        if (Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo) != 0) {
-            ENGINE_LOGE("Get hap token info error");
+        int32_t ret = Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo);
+        if (ret != 0) {
+            ENGINE_LOGE("Get hap token info error, ret %{public}d", ret);
             return "";
         }
         return hapTokenInfo.bundleName;

@@ -55,7 +55,7 @@ int32_t AuditEventReport::ReportResetAuditEvent(const std::string &caller)
         std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, "1.0", reportContent);
     int32_t ret = OHOS::Security::SecurityGuard::NativeDataCollectKit::ReportSecurityInfo(eventInfo);
     if (ret != 0) {
-        ENGINE_LOGE("ReportSecurityInfo fail");
+        ENGINE_LOGE("ReportSecurityInfo fail, ret %{public}d", ret);
         return INT_CALL_FAIL;
     }
     return INT_CALL_SUCCESS;
