@@ -19,7 +19,7 @@
 
 namespace OHOS {
 namespace UpdateService {
-int32_t AuditEventReport::ReportResetAuditEvent(const std::string caller)
+int32_t AuditEventReport::ReportResetAuditEvent(const std::string &caller)
 {
     ENGINE_LOGI("ReportResetAuditEvent, caller %{public}s", caller.c_str());
     return 0;

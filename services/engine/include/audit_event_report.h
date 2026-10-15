@@ -23,7 +23,7 @@ namespace OHOS {
 namespace UpdateService {
 class AuditEventReport {
 public:
-    static int32_t ReportResetAuditEvent(const std::string caller);
+    static int32_t ReportResetAuditEvent(const std::string &caller);
 };
 } // namespace UpdateService
 } // namespace OHOS

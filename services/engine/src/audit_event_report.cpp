@@ -21,9 +21,13 @@
 
 namespace OHOS {
 namespace UpdateService {
-int32_t AuditEventReport::ReportResetAuditEvent(const std::string caller)
+int32_t AuditEventReport::ReportResetAuditEvent(const std::string &caller)
 {
-    constexpr int64_t eventId = 0x36000001;
+    if (caller.empty()) {
+        ENGINE_LOGE("caller is null, skip report");
+        return INT_CALL_FAIL;
+    }
+
     cJSON *callPkgJson = cJSON_CreateObject();
     if (callPkgJson == nullptr) {
         ENGINE_LOGE("callPkgJson create fail");
@@ -46,10 +50,7 @@ int32_t AuditEventReport::ReportResetAuditEvent(const std::string caller)
     std::string reportContent(buff);
     cJSON_free(buff);
     cJSON_Delete(callPkgJson);
-    if (reportContent.empty()) {
-        ENGINE_LOGE("cJSON_PrintUnformatted fail, skip report");
-        return INT_CALL_FAIL;
-    }
+    constexpr int64_t eventId = 0x36000001;
     std::shared_ptr<OHOS::Security::SecurityGuard::EventInfo> eventInfo =
         std::make_shared<OHOS::Security::SecurityGuard::EventInfo>(eventId, "1.0", reportContent);
     int32_t ret = OHOS::Security::SecurityGuard::NativeDataCollectKit::ReportSecurityInfo(eventInfo);
