@@ -17,9 +17,17 @@
 
 #include "battery_srv_client.h"
 #include "firmware_log.h"
+#include "string_utils.h"
 
 namespace OHOS {
 namespace UpdateService {
+bool BatteryStateUtils::IsDeviceHasBattery()
+{
+    bool isDeviceHasBattery = OHOS::PowerMgr::BatterySrvClient::GetInstance().GetPresent();
+    FIRMWARE_LOGI("IsDeviceHasBattery %{public}s", StringUtils::GetBoolStr(isDeviceHasBattery).c_str());
+    return isDeviceHasBattery;
+}
+
 bool BatteryStateUtils::IsBatteryEnough(int32_t batteryLimit)
 {
     auto& batteryClient = OHOS::PowerMgr::BatterySrvClient::GetInstance();
