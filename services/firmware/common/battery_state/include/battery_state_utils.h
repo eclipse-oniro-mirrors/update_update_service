@@ -22,6 +22,7 @@ namespace OHOS {
 namespace UpdateService {
 class BatteryStateUtils {
 public:
+    static bool IsDeviceHasBattery();
     static bool IsBatteryEnough(int32_t batteryLimit);
 };
 } // namespace UpdateService

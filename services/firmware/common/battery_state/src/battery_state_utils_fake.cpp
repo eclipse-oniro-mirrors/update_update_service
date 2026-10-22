@@ -19,6 +19,12 @@
 
 namespace OHOS {
 namespace UpdateService {
+bool BatteryStateUtils::IsDeviceHasBattery()
+{
+    FIRMWARE_LOGI("BatteryStateUtils::IsDeviceHasBattery fake: false");
+    return false;
+}
+
 bool BatteryStateUtils::IsBatteryEnough(int32_t batteryLimit)
 {
     FIRMWARE_LOGI("BatteryStateUtils::IsBatteryEnough fake: true");
