@@ -23,11 +23,14 @@
 #include <mutex>
 #include <string>
 
+#ifdef UPDATE_SERVICE_FEATURE_ENABLE
 #include "common_event_subscriber.h"
+#endif
 #include "user_account_helper.h"
 
 namespace OHOS {
 namespace UpdateService {
+#ifdef UPDATE_SERVICE_FEATURE_ENABLE
 class UserUnlockSubscriber final : public EventFwk::CommonEventSubscriber {
 public:
     using OnUnlockedCallback = std::function<void()>;
@@ -40,6 +43,7 @@ public:
 private:
     OnUnlockedCallback onUnlocked_;
 };
+#endif
 
 class UpdateUserUnlockObserver : public std::enable_shared_from_this<UpdateUserUnlockObserver> {
 public:
@@ -53,6 +57,7 @@ public:
     // 检查是否解锁
     bool HasUserUnlocked() const;
 
+#ifdef UPDATE_SERVICE_FEATURE_ENABLE
 private:
     void RegisterUserUnlockListener();
     void UnregisterUserUnlockListener();
@@ -63,6 +68,7 @@ private:
     std::atomic<bool> initialized_ = false;
     std::mutex subscriberLock_;
     std::shared_ptr<EventFwk::CommonEventSubscriber> userUnlockSubscriber_ = nullptr;
+#endif
 };
 } // namespace UpdateService
 } // namespace OHOS
