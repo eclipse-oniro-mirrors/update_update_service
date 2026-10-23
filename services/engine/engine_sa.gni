@@ -41,44 +41,58 @@ declare_args() {
 
 sa_sources = [
   "$updateengine_root_path/services/core/ability/adapter/src/config_parse.cpp",
-  "$updateengine_root_path/services/core/ability/adapter/src/device_adapter.cpp",
-  "$updateengine_root_path/services/core/ability/alarm/src/timer_manager.cpp",
-  "$updateengine_root_path/services/core/ability/status_cache/src/status_cache.cpp",
   "$updateengine_root_path/services/core/ability/utils/src/file_utils.cpp",
-  "$updateengine_root_path/services/core/ability/utils/src/sha256_utils.cpp",
-  "$updateengine_root_path/services/core/ability/utils/src/response_header_parse.cpp",
-  "$updateengine_root_path/services/core/ability/utils/src/sha256_delay_strategy_utils.cpp",
-  "$updateengine_root_path/services/core/ability/utils/src/time_utils_proxy.cpp",
-  "$updateengine_root_path/services/engine/src/progress_thread.cpp",
-  "$updateengine_root_path/services/engine/src/stream_progress_thread.cpp",
-  "$updateengine_root_path/services/engine/src/update_service.cpp",
   "$updateengine_root_path/services/engine/src/update_service_cache.cpp",
-  "$updateengine_root_path/services/engine/src/update_service_impl_firmware.cpp",
-  "$updateengine_root_path/services/engine/src/update_service_impl_manager.cpp",
-  "$updateengine_root_path/services/engine/src/update_service_local_updater.cpp",
+  "$updateengine_root_path/services/engine/src/update_service_common.cpp",
   "$updateengine_root_path/services/engine/src/update_service_restorer.cpp",
-  "$updateengine_root_path/services/engine/src/update_service_util_hmos.cpp",
 ]
 
-if (ability_ability_base_enable || ability_ability_runtime_enable) {
+if (update_service_feature_enable) {
   sa_sources += [
-    "$updateengine_root_path/services/core/ability/alarm/src/alarm_timer_utils.cpp",
-    "$updateengine_root_path/services/core/ability/callback/src/base_callback_utils.cpp",
-    "$updateengine_root_path/services/engine/src/update_notify.cpp",
+    "$updateengine_root_path/services/core/ability/adapter/src/device_adapter.cpp",
+    "$updateengine_root_path/services/core/ability/alarm/src/timer_manager.cpp",
+    "$updateengine_root_path/services/core/ability/status_cache/src/status_cache.cpp",
+    "$updateengine_root_path/services/core/ability/utils/src/sha256_utils.cpp",
+    "$updateengine_root_path/services/core/ability/utils/src/response_header_parse.cpp",
+    "$updateengine_root_path/services/core/ability/utils/src/sha256_delay_strategy_utils.cpp",
+    "$updateengine_root_path/services/core/ability/utils/src/time_utils_proxy.cpp",
+    "$updateengine_root_path/services/engine/src/progress_thread.cpp",
+    "$updateengine_root_path/services/engine/src/stream_progress_thread.cpp",
+    "$updateengine_root_path/services/engine/src/update_service.cpp",
+    "$updateengine_root_path/services/engine/src/update_service_impl_firmware.cpp",
+    "$updateengine_root_path/services/engine/src/update_service_impl_manager.cpp",
+    "$updateengine_root_path/services/engine/src/update_service_local_updater.cpp",
+    "$updateengine_root_path/services/engine/src/update_service_util_hmos.cpp",
   ]
+} else {
+  sa_sources += [ "$updateengine_root_path/services/engine/src/update_service_empty.cpp" ]
+}
+
+if (ability_ability_base_enable || ability_ability_runtime_enable) {
+  sa_sources += [ "$updateengine_root_path/services/core/ability/alarm/src/alarm_timer_utils.cpp" ]
+  if (update_service_feature_enable) {
+    sa_sources += [
+      "$updateengine_root_path/services/core/ability/callback/src/base_callback_utils.cpp",
+      "$updateengine_root_path/services/engine/src/update_notify.cpp",
+    ]
+  } else {
+    sa_sources += [ "$updateengine_root_path/services/core/ability/callback/src/base_callback_utils_empty.cpp" ]
+  }
 } else {
   sa_sources += [ "$updateengine_root_path/services/core/ability/callback/src/base_callback_utils_empty.cpp" ]
 }
 
-if (communication_netmanager_base_enable) {
-  sa_sources += [
-    "$updateengine_root_path/services/utils/src/dupdate_net_manager.cpp",
-    "$updateengine_root_path/services/utils/src/dupdate_net_observer.cpp",
-  ]
-} else {
-  sa_sources += [
-    "$updateengine_root_path/services/utils/src/dupdate_net_manager_empty.cpp",
-  ]
+if (update_service_feature_enable) {
+  if (communication_netmanager_base_enable) {
+    sa_sources += [
+      "$updateengine_root_path/services/utils/src/dupdate_net_manager.cpp",
+      "$updateengine_root_path/services/utils/src/dupdate_net_observer.cpp",
+    ]
+  } else {
+    sa_sources += [
+      "$updateengine_root_path/services/utils/src/dupdate_net_manager_empty.cpp",
+    ]
+  }
 }
 
 if (preference_native_preferences_enable) {
@@ -93,13 +107,7 @@ if (pc_feature_enable) {
   sa_sources += [ "$updateengine_root_path/services/engine/src/audit_event_report_fake.cpp" ]
 }
 
-sa_sources += firmware_src
-sa_sources += bell_utils_src
-sa_sources += sqlite_src
 sa_sources += startup_src
-sa_sources += download_src
-sa_sources += net_request_src
-sa_sources += async_task_src
 sa_sources += user_unlock_src
 
 sa_include_dirs = [
@@ -157,7 +165,6 @@ sa_external_deps = [
   "access_token:libtokenid_sdk",
   "cJSON:cjson",
   "c_utils:utils",  # refbase
-  "curl:curl_shared",
   "hilog:libhilog",
   "hisysevent:libhisysevent",
   "init:libbegetutil",
@@ -239,7 +246,7 @@ if (preference_native_preferences_enable) {
 if (update_service_enable_run_on_demand_qos) {
   sa_defines += [ "UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS" ]
 }
-sa_defines += sqlite_defines
+
 
 if (update_service_feature_enable) {
   sa_sources += firmware_src
