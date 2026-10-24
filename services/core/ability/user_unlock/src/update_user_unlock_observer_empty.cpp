@@ -23,17 +23,22 @@ int32_t UserAccountHelper::GetActiveUserId() const
     return -1;
 }
 
-int32_t UserAccountHelper::IsActiveUserUnlocked(int32_t userId) const
+bool UserAccountHelper::IsActiveUserUnlocked(int32_t userId) const
 {
     (void)userId;
     return false;
 }
 
-UserUnlockSubscriber::~UserUnlockSubscriber() = default;
+UpdateUserUnlockObserver::UpdateUserUnlockObserver(UnlockCallback onUnlocked)
+{
+    (void)onUnlocked;
+}
 
-void UserUnlockSubscriber::Start() {};
+UpdateUserUnlockObserver::~UpdateUserUnlockObserver() = default;
 
-void UserUnlockSubscriber::Stop() {};
+void UpdateUserUnlockObserver::Start() {}
+
+void UpdateUserUnlockObserver::Stop() {}
 
 bool UpdateUserUnlockObserver::HasUserUnlocked() const
 {
