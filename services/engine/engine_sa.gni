@@ -259,7 +259,7 @@ if (update_service_feature_enable) {
   sa_deps += firmware_deps
   sa_deps += bell_utils_deps
 
-  sa_external_deps +=[
+  sa_external_deps += [
     "bundle_framework:appexecfwk_core",
     "curl:curl_shared",
     "libxml2:libxml2",

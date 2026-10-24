@@ -38,8 +38,6 @@
 #include "tokenid_kit.h"
 #include "update_log.h"
 #include "update_service_cache.h"
-#include "update_service_local_updater.h"
-#include "update_service_module.h"
 #include "update_service_restorer.h"
 #include "update_service_util.h"
 #include "update_system_event.h"
@@ -60,14 +58,6 @@ constexpr int NORMAL_PRIO = 0;
 
 UpdateService::UpdateService(int32_t systemAbilityId, bool runOnCreate)
     : SystemAbility(systemAbilityId, runOnCreate) {}
-
-UpdateService::~UpdateService()
-{
-    ENGINE_LOGI("UpdateServerTest free now");
-    for (auto &iter : clientProxyMap_) {
-        iter.second.RemoveDeathRecipient();
-    }
-}
 
 int32_t UpdateService::RegisterUpdateCallback(const UpgradeInfo &info, const sptr<IUpdateCallback> &updateCallback,
     int32_t &funcResult)

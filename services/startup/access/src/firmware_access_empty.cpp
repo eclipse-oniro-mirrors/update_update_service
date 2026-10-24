@@ -31,7 +31,7 @@ FirmwareAccess::~FirmwareAccess()
 
 void FirmwareAccess::Init(StartupReason startupReason)
 {
-    ENGINE_LOGI("FirmwareAccess Init");
+    ENGINE_LOGI("FirmwareAccess empty Init");
 }
 
 bool FirmwareAccess::IsIdle()

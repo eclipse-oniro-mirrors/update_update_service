@@ -32,12 +32,13 @@ startup_src = [
   "$startup_root_path/manage/src/startup_manager.cpp",
   "$startup_root_path/manage/src/system_ability_operator.cpp",
 ]
+
 if (update_service_feature_enable) {
   startup_src += [ "$startup_root_path/access/src/firmware_access.cpp" ]
 } else {
   startup_src += [
     "$startup_root_path/access/src/firmware_access_empty.cpp",
-    "$startup_root_path/access/src/firmware_preference_utils_empty.cpp"
+    "$startup_root_path/manage/src/firmware_preferences_utils_empty.cpp"
   ]
 }
 

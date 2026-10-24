@@ -290,7 +290,7 @@ std::string UpdateService::GetCallingAppId()
     auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
     if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_HAP) {
         Security::AccessToken::HapTokenInfo  hapTokenInfo;
-        int32_t ret = Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo);
+        int32_t ret = OHOS::Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo);
         if (ret != 0) {
             ENGINE_LOGE("Get hap token info error, ret %{public}d", ret);
             return "";
@@ -394,7 +394,7 @@ int32_t UpdateService::GetDeepFactoryResetInfo(const FactoryResetStrategy &facto
 {
     sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
     if (restorer == nullptr) {
-        ENGINE_LOGE("DeepFactoryReset restorer null");
+        ENGINE_LOGE("GetDeepFactoryResetInfo restorer null");
         return INT_CALL_FAIL;
     }
     return restorer->GetDeepFactoryResetInfo(factoryResetStrategy, factoryResetInfo, businessError);
