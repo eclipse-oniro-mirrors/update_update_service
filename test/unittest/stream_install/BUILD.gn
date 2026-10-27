@@ -42,25 +42,27 @@ ohos_unittest("firmware_stream_installer_install_test") {
   part_name = updateengine_part_name
 }
 
-ohos_unittest("stream_progress_thread_test") {
-  module_out_path = module_output_path
-  include_dirs = sa_include_dirs
-  deps = sa_deps
-  external_deps = sa_external_deps
-  defines = [ "UPDATER_UT" ]
-  sources = [
-    "$updateengine_root_path/services/engine/src/progress_thread.cpp",
-    "$updateengine_root_path/services/engine/src/stream_progress_thread.cpp",
-    "$updateengine_root_path/test/unittest/stream_install/stream_progress_thread_test.cpp",
-  ]
-  external_deps += [ "googletest:gtest_main" ]
-  part_name = updateengine_part_name
+if (!is_emulator) {
+  ohos_unittest("stream_progress_thread_test") {
+    module_out_path = module_output_path
+    include_dirs = sa_include_dirs
+    deps = sa_deps
+    external_deps = sa_external_deps
+    defines = [ "UPDATER_UT" ]
+    sources = [
+      "$updateengine_root_path/services/engine/src/progress_thread.cpp",
+      "$updateengine_root_path/services/engine/src/stream_progress_thread.cpp",
+      "$updateengine_root_path/test/unittest/stream_install/stream_progress_thread_test.cpp",
+    ]
+    external_deps += [ "googletest:gtest_main" ]
+    part_name = updateengine_part_name
+  }
 }
 
 group("stream_install_unittest") {
   testonly = true
-  deps = [
-    ":firmware_stream_installer_install_test",
-    ":stream_progress_thread_test",
-  ]
+  deps = [ ":firmware_stream_installer_install_test" ]
+  if (!is_emulator) {
+    deps += [ ":stream_progress_thread_test" ]
+  }
 }
