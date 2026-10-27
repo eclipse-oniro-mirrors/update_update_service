@@ -38,6 +38,8 @@
 #include "tokenid_kit.h"
 #include "update_log.h"
 #include "update_service_cache.h"
+#include "update_service_local_updater.h"
+#include "update_service_module.h"
 #include "update_service_restorer.h"
 #include "update_service_util.h"
 #include "update_system_event.h"

@@ -130,6 +130,48 @@ sptr<UpdateService> UpdateService::GetInstance()
     return updateService_;
 }
 
+int32_t UpdateService::FactoryReset(BusinessError &businessError, int32_t &funcResult)
+{
+    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
+    if (restorer == nullptr) {
+        ENGINE_LOGI("FactoryReset restorer null");
+        return INT_CALL_FAIL;
+    }
+    return restorer->FactoryReset(businessError);
+}
+
+int32_t UpdateService::ForceFactoryReset(BusinessError &businessError, int32_t &funcResult)
+{
+    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
+    if (restorer == nullptr) {
+        ENGINE_LOGI("ForceFactoryReset restorer null");
+        return INT_CALL_FAIL;
+    }
+    return restorer->ForceFactoryReset(businessError);
+}
+
+int32_t UpdateService::DeepFactoryReset(const FactoryResetStrategy &factoryResetStrategy, BusinessError &businessError,
+    int32_t &funcResult)
+{
+    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
+    if (restorer == nullptr) {
+        ENGINE_LOGE("DeepFactoryReset restorer null");
+        return INT_CALL_FAIL;
+    }
+    return restorer->DeepFactoryReset(factoryResetStrategy, businessError);
+}
+
+int32_t UpdateService::GetDeepFactoryResetInfo(const FactoryResetStrategy &factoryResetStrategy,
+    FactoryResetInfo &factoryResetInfo, BusinessError &businessError, int32_t &funcResult)
+{
+    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
+    if (restorer == nullptr) {
+        ENGINE_LOGE("DeepFactoryReset restorer null");
+        return INT_CALL_FAIL;
+    }
+    return restorer->GetDeepFactoryResetInfo(factoryResetStrategy, factoryResetInfo, businessError);
+}
+
 void BuildUpgradeInfoDump(const int fd, UpgradeInfo &info)
 {
     dprintf(fd, "---------------------upgrade info info--------------------\n");
@@ -230,6 +272,60 @@ void UpdateService::SetThreadPrio(int priority)
 }
 #endif
 
+int32_t UpdateService::PermissionCheck(uint32_t code)
+{
+    ENGINE_LOGI("UpdateService Oh PermissionCheck, code: %{public}u", code);
+    if (!IsCallerValid()) {
+        ENGINE_LOGE("UpdateService IsCallerValid false");
+        return INT_NOT_SYSTEM_APP;
+    }
+
+    if (!IsPermissionGranted(code)) {
+        ENGINE_LOGE("UpdateService code %{public}u IsPermissionGranted false", code);
+        return INT_APP_NOT_GRANTED;
+    }
+
+    if (IsResetDisabledByMdm(code)) {
+        ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
+        int32_t ret = AuditEventReport::ReportResetAuditEvent(GetCallingAppId());
+        ENGINE_LOGI("ReportResetAuditEvent result = %{public}d", ret);
+        return INT_MDM_DISABLE_RESET;
+    }
+
+    if (code == CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET)) {
+        SYS_EVENT_SYSTEM_RESET(0, UpdateSystemEvent::RESET_START);
+    }
+    return INT_CALL_SUCCESS;
+}
+
+int32_t UpdateService::CallbackExit(uint32_t code, int32_t result)
+{
+    return INT_CALL_SUCCESS;
+}
+
+int32_t UpdateService::CallbackParcel(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option)
+{
+    // 未加载接口扩展能力，通过IDL框架分发
+    if (!ModuleManager::GetInstance().IsModuleLoaded()) {
+        ENGINE_LOGI("CallbackParcel, extend module not loaded, code %{public}u", code);
+        return INT_CALL_SUCCESS;
+    }
+
+    // 加载了接口扩展能力， 但是当前调用接口不是拓展接口，还是通过idl框架分发
+    if (!ModuleManager::GetInstance().IsMapFuncExist(code)) {
+        ENGINE_LOGE("CallbackParcel, code %{public}u not extended", code);
+        return INT_CALL_SUCCESS;
+    }
+
+    // 加载了接口扩展能力， 并且当前调用接口为拓展接口，则通过Hook框架分发
+    int32_t ret = ModuleManager::GetInstance().HandleFunc(code, data, reply, option);
+    ENGINE_LOGE("CallbackParcel, code %{public}u extended, result %{public}d", code, ret);
+    if (ret != INT_CALL_SUCCESS) {
+        return ret;
+    }
+    return INT_CALL_FAIL;
+}
+
 bool UpdateService::IsCallerValid()
 {
     OHOS::Security::AccessToken::AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
@@ -290,7 +386,7 @@ std::string UpdateService::GetCallingAppId()
     auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
     if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_HAP) {
         Security::AccessToken::HapTokenInfo  hapTokenInfo;
-        int32_t ret = OHOS::Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo);
+        int32_t ret = Security::AccessToken::AccessTokenKit::GetHapTokenInfo(callerToken, hapTokenInfo);
         if (ret != 0) {
             ENGINE_LOGE("Get hap token info error, ret %{public}d", ret);
             return "";
@@ -301,103 +397,6 @@ std::string UpdateService::GetCallingAppId()
         return std::to_string(IPCSkeleton::GetCallingUid());
     }
     return "";
-}
-
-
-int32_t UpdateService::PermissionCheck(uint32_t code)
-{
-    ENGINE_LOGI("UpdateService Oh PermissionCheck, code: %{public}u", code);
-    if (!IsCallerValid()) {
-        ENGINE_LOGE("UpdateService IsCallerValid false");
-        return INT_NOT_SYSTEM_APP;
-    }
-
-    if (!IsPermissionGranted(code)) {
-        ENGINE_LOGE("UpdateService code %{public}u IsPermissionGranted false", code);
-        return INT_APP_NOT_GRANTED;
-    }
-
-    if (IsResetDisabledByMdm(code)) {
-        ENGINE_LOGE("UpdateService code %{public}u mdm not allow reset", code);
-        int32_t ret = AuditEventReport::ReportResetAuditEvent(GetCallingAppId());
-        ENGINE_LOGI("ReportResetAuditEvent result = %{public}d", ret);
-        return INT_MDM_DISABLE_RESET;
-    }
-
-    if (code == CAST_UINT(UpdaterSaInterfaceCode::FACTORY_RESET)) {
-        SYS_EVENT_SYSTEM_RESET(0, UpdateSystemEvent::RESET_START);
-    }
-    return INT_CALL_SUCCESS;
-}
-
-int32_t UpdateService::CallbackExit(uint32_t code, int32_t result)
-{
-    return INT_CALL_SUCCESS;
-}
-
-int32_t UpdateService::CallbackParcel(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option)
-{
-    // 未加载接口扩展能力，通过IDL框架分发
-    if (!ModuleManager::GetInstance().IsModuleLoaded()) {
-        ENGINE_LOGI("CallbackParcel, extend module not loaded, code %{public}u", code);
-        return INT_CALL_SUCCESS;
-    }
-
-    // 加载了接口扩展能力， 但是当前调用接口不是拓展接口，还是通过idl框架分发
-    if (!ModuleManager::GetInstance().IsMapFuncExist(code)) {
-        ENGINE_LOGE("CallbackParcel, code %{public}u not extended", code);
-        return INT_CALL_SUCCESS;
-    }
-
-    // 加载了接口扩展能力， 并且当前调用接口为拓展接口，则通过Hook框架分发
-    int32_t ret = ModuleManager::GetInstance().HandleFunc(code, data, reply, option);
-    ENGINE_LOGE("CallbackParcel, code %{public}u extended, result %{public}d", code, ret);
-    if (ret != INT_CALL_SUCCESS) {
-        return ret;
-    }
-    return INT_CALL_FAIL;
-}
-
-int32_t UpdateService::FactoryReset(BusinessError &businessError, int32_t &funcResult)
-{
-    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
-    if (restorer == nullptr) {
-        ENGINE_LOGI("FactoryReset restorer null");
-        return INT_CALL_FAIL;
-    }
-    return restorer->FactoryReset(businessError);
-}
-
-int32_t UpdateService::ForceFactoryReset(BusinessError &businessError, int32_t &funcResult)
-{
-    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
-    if (restorer == nullptr) {
-        ENGINE_LOGI("ForceFactoryReset restorer null");
-        return INT_CALL_FAIL;
-    }
-    return restorer->ForceFactoryReset(businessError);
-}
-
-int32_t UpdateService::DeepFactoryReset(const FactoryResetStrategy &factoryResetStrategy, BusinessError &businessError,
-    int32_t &funcResult)
-{
-    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
-    if (restorer == nullptr) {
-        ENGINE_LOGE("DeepFactoryReset restorer null");
-        return INT_CALL_FAIL;
-    }
-    return restorer->DeepFactoryReset(factoryResetStrategy, businessError);
-}
-
-int32_t UpdateService::GetDeepFactoryResetInfo(const FactoryResetStrategy &factoryResetStrategy,
-    FactoryResetInfo &factoryResetInfo, BusinessError &businessError, int32_t &funcResult)
-{
-    sptr<UpdateServiceRestorer> restorer = sptr<UpdateServiceRestorer>::MakeSptr();
-    if (restorer == nullptr) {
-        ENGINE_LOGE("GetDeepFactoryResetInfo restorer null");
-        return INT_CALL_FAIL;
-    }
-    return restorer->GetDeepFactoryResetInfo(factoryResetStrategy, factoryResetInfo, businessError);
 }
 } // namespace UpdateService
 } // namespace OHOS
