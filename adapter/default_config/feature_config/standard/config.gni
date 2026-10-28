@@ -18,7 +18,6 @@ declare_args() {
       "//base/update/updateservice/services/engine/etc/updater_sa.cfg"
   update_service_sa_profile_path =
       "//base/update/updateservice/services/engine/sa_profile/3006.json"
-  update_service_feature_enable = true
   ability_ability_runtime_enable = true
   if (!defined(global_parts_info.ability_ability_runtime)) {
     ability_ability_runtime_enable = false
@@ -32,6 +31,11 @@ declare_args() {
     && global_parts_info.update_service_online_updater == false) {
     update_service_online_updater = false
   }
+}
+
+declare_args() {
+  update_service_feature_enable =
+      update_service_sa_profile_path == "//base/update/updateservice/services/engine/sa_profile/3006.json"
 }
 
 # pc部件弱依赖
