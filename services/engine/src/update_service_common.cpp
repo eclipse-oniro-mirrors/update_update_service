@@ -15,33 +15,22 @@
 
 #include "update_service.h"
 
-#include <dlfcn.h>
 #include <unistd.h>
 #include <unordered_set>
 #include <updater_sa_ipc_interface_code.h>
 
-#include "iservice_registry.h"
 #include "system_ability_definition.h"
 
 #include "audit_event_report.h"
 #include "accesstoken_kit.h"
-#include "access_manager.h"
 #include "access_token.h"
-#include "config_parse.h"
-#include "firmware_common.h"
 #include "ipc_skeleton.h"
 #include "module_manager.h"
-#include "parameter.h"
 #include "parameters.h"
-#include "securec.h"
-#include "startup_manager.h"
 #include "tokenid_kit.h"
 #include "update_log.h"
 #include "update_service_cache.h"
-#include "update_service_local_updater.h"
-#include "update_service_module.h"
 #include "update_service_restorer.h"
-#include "update_service_util.h"
 #include "update_system_event.h"
 
 #ifdef UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS
