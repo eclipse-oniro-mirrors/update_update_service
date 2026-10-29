@@ -33,6 +33,11 @@ declare_args() {
   }
 }
 
+declare_args() {
+  update_service_feature_enable =
+      update_service_sa_profile_path == "//base/update/updateservice/services/engine/sa_profile/3006.json"
+}
+
 # pc部件弱依赖
 declare_args() {
   pc_feature_enable = false
