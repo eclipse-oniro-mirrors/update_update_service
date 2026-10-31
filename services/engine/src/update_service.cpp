@@ -54,11 +54,6 @@ using namespace std;
 
 namespace OHOS {
 namespace UpdateService {
-#ifdef UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS
-constexpr int OPEN_SO_PRIO = -20;
-constexpr int NORMAL_PRIO = 0;
-#endif
-
 UpdateService::UpdateService(int32_t systemAbilityId, bool runOnCreate)
     : SystemAbility(systemAbilityId, runOnCreate)
 {
@@ -311,10 +306,12 @@ void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
     std::string libPath = DelayedSingleton<ConfigParse>::GetInstance()->GetModuleLibPath();
     ENGINE_LOGI("GetModuleLibPath %{public}s ", libPath.c_str());
 #ifdef UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS
+    constexpr int OPEN_SO_PRIO = -20;
     SetThreadPrio(OPEN_SO_PRIO);
 #endif
     ModuleManager::GetInstance().LoadModule(libPath);
 #ifdef UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS
+    constexpr int NORMAL_PRIO = 0;
     SetThreadPrio(NORMAL_PRIO);
 #endif
 
