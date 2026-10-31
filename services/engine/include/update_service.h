@@ -35,11 +35,6 @@
 
 namespace OHOS {
 namespace UpdateService {
-#ifdef UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS
-extern const int OPEN_SO_PRIO;
-extern const int NORMAL_PRIO;
-#endif
-
 class UpdateService : public SystemAbility, public UpdateServiceStub {
 public:
     DECLARE_SYSTEM_ABILITY(UpdateService);

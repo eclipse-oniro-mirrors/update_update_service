@@ -50,11 +50,6 @@ REGISTER_SYSTEM_ABILITY_BY_ID(UpdateService, UPDATE_DISTRIBUTED_SERVICE_ID, true
 
 OHOS::sptr<UpdateService> UpdateService::updateService_ { nullptr };
 
-#ifdef UPDATE_SERVICE_ENABLE_RUN_ON_DEMAND_QOS
-const int OPEN_SO_PRIO = -20;
-const int NORMAL_PRIO = 0;
-#endif
-
 void UpdateService::ClientDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &remote)
 {
     ENGINE_LOGI("client DeathRecipient OnRemoteDied: %{public}s", upgradeInfo_.ToString().c_str());
