@@ -109,9 +109,8 @@ void FirmwareDownloadDataProcessor::SetDownloadEvent(const std::string &download
     {
         std::lock_guard<std::recursive_mutex> guard(GetFirmwareCancelMutex());
         GetTask();
-        if (!tasks_.isExistTask || tasks_.status == UpgradeStatus::CHECK_VERSION_SUCCESS) {
-            FIRMWARE_LOGI("SetDownloadCallbackInfo discard, task canceled or not exists, status: %{public}d",
-                CAST_INT(tasks_.status));
+        if (!tasks_.isExistTask) {
+            FIRMWARE_LOGI("SetDownloadEvent discard, status: %{public}d", CAST_INT(tasks_.status));
             return;
         }
         taskId = tasks_.taskId;
