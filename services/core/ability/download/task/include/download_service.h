@@ -17,6 +17,7 @@
 #define DOWNLOAD_SERVICE_H
 
 #include <atomic>
+#include <vector>
 
 #include "download_thread.h"
 #include "network_type.h"
@@ -39,6 +40,7 @@ public:
 
     void RemoveDownloadTask(const std::string &taskId);
     void SetDisableCallbackFlag(bool flag);
+    std::vector<DownloadInfo> SnapshotDownloadInfos();
 
 protected:
     void CallbackUpdateDownloadProgress(DownloadCallbackInfo info);

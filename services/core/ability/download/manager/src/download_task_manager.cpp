@@ -286,19 +286,22 @@ void DownloadTaskManager::OnNetChange(NetType netType)
 
 void DownloadTaskManager::DealCallBack(const std::string &taskId, ProgressInfo &progressInfo, DownloadCallback callback)
 {
-    std::shared_ptr<DownloadTask> taskTmp = nullptr;
-    if (!downloadTaskMap_.Find(taskId, taskTmp)) {
-        // 任务已经被取消或者完成，输出日志
-        ENGINE_LOGE("DealCallBack, task not exist, taskId %{public}s", taskId.c_str());
-        return;
-    }
-
-    // 下载 成功、失败、取消场景下，在回调中移除task
     std::shared_ptr<DownloadTask> downloadTask = nullptr;
-    if (progressInfo.taskStatus == DownloadStatus::FAIL || progressInfo.taskStatus == DownloadStatus::SUCCESS ||
-        progressInfo.taskStatus == DownloadStatus::CANCEL) {
-        downloadTask = downloadTaskMap_.ReadVal(taskId);
-        downloadTaskMap_.Erase(taskId);
+    {
+        std::lock_guard<ffrt::recursive_mutex> guard(downloadTaskMapMutex_);
+        std::shared_ptr<DownloadTask> taskTmp = nullptr;
+        if (!downloadTaskMap_.Find(taskId, taskTmp)) {
+            // 任务已经被取消或者完成，输出日志
+            ENGINE_LOGE("DealCallBack, task not exist, taskId %{public}s", taskId.c_str());
+            return;
+        }
+
+        // 下载 成功、失败、取消场景下，在回调中移除task
+        if (progressInfo.taskStatus == DownloadStatus::FAIL || progressInfo.taskStatus == DownloadStatus::SUCCESS ||
+            progressInfo.taskStatus == DownloadStatus::CANCEL) {
+            downloadTask = downloadTaskMap_.ReadVal(taskId);
+            downloadTaskMap_.Erase(taskId);
+        }
     }
 
     // 回调业务侧

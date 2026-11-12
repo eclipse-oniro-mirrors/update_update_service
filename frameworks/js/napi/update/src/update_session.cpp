@@ -101,12 +101,14 @@ void UpdateListener::NotifyJS(napi_env env, napi_value thisVar, const EventInfo 
     napi_value jsEvent = nullptr;
     ClientStatus ret = ClientHelper::BuildEventInfo(env, jsEvent, eventInfo);
     PARAM_CHECK_NAPI_CALL(env, ret == ClientStatus::CLIENT_SUCCESS, return, "Failed to build event info");
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    PARAM_CHECK_NAPI_CALL(env, handlerRef_ != nullptr, return, "handlerRef_ has beed freed");
+    napi_status status;
     napi_value handler = nullptr;
-    napi_status status = napi_get_reference_value(env, handlerRef_, &handler);
-    PARAM_CHECK_NAPI_CALL(env, status == napi_ok && handler != nullptr, return, "Failed to get reference");
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        PARAM_CHECK_NAPI_CALL(env, handlerRef_ != nullptr, return, "handlerRef_ has beed freed");
+        status = napi_get_reference_value(env, handlerRef_, &handler);
+        PARAM_CHECK_NAPI_CALL(env, status == napi_ok && handler != nullptr, return, "Failed to get reference");
+    }
 
     napi_value callResult = nullptr;
     status = napi_call_function(env, thisVar, handler, 1, &jsEvent, &callResult);

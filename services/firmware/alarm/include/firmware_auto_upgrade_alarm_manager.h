@@ -51,6 +51,7 @@ private:
 
 private:
     uint64_t autoTimerId_ = 0;
+    std::recursive_mutex autoUpgradeAlarmMutex_;
     std::shared_ptr<FirmwarePreferencesUtil> preferencesUtil_ = FirmwarePreferencesUtil::GetInstance();
 };
 } // namespace OHOS::UpdateService

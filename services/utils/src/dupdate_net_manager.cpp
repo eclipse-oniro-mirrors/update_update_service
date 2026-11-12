@@ -84,12 +84,12 @@ void NetManager::UnregisterCallback(NetChangeCallbackType callbackType)
 
 NetType NetManager::GetNetType()
 {
-    return netType_;
+    return netType_.load();
 }
 
 bool NetManager::IsNetAvailable(NetType netType)
 {
-    return (CAST_UINT(netType_) & CAST_UINT(netType)) > 0;
+    return (CAST_UINT(netType_.load()) & CAST_UINT(netType)) > 0;
 }
 
 bool NetManager::OnNetChange(NetType netType)
@@ -98,10 +98,10 @@ bool NetManager::OnNetChange(NetType netType)
         ENGINE_LOGE("OnNetChange illegal netType = %{public}d", netType);
         return false;
     }
-    if (netType == netType_) {
+    if (netType == netType_.load()) {
         return true;
     }
-    netType_ = netType;
+    netType_.store(netType);
     ENGINE_LOGI("OnNetChange type = %{public}d", netType);
     std::lock_guard<std::mutex> guard(netChangeMutex_);
     for (auto iter = netChangeCallbackMap_.begin(); iter != netChangeCallbackMap_.end();) {

@@ -96,6 +96,7 @@ void FirmwareAutoUpgradeAlarmManager::RegisterAutoUpgradeTime(AutoUpgradeTimeRef
         std::to_string(autoTimerId_).c_str(), TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str());
     int64_t autoUpgradeTimeCalculateResult = autoUpgradeTime;
     CalculateAutoUpgradeTime(refreshType, autoUpgradeTimeCalculateResult, duration);
+    std::lock_guard<std::recursive_mutex> lock(autoUpgradeAlarmMutex_);
     if (autoUpgradeTime == autoUpgradeTimeCalculateResult && autoTimerId_ > 0) {
         FIRMWARE_LOGI("current AutoUpgradeTime %{public}s is active",
             TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str());
@@ -163,6 +164,7 @@ void FirmwareAutoUpgradeAlarmManager::HandleNetChange(int64_t currentTime, int64
 void FirmwareAutoUpgradeAlarmManager::CancelAutoUpgradeAlarm()
 {
     ENGINE_LOGI("CancelAutoUpgradeAlarm");
+    std::lock_guard<std::recursive_mutex> lock(autoUpgradeAlarmMutex_);
     UnregisterAlarmTimer(autoTimerId_);
 }
 

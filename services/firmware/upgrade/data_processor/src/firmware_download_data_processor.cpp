@@ -23,6 +23,7 @@
 #include "firmware_constant.h"
 #include "firmware_file_utils.h"
 #include "firmware_log.h"
+#include "firmware_manager.h"
 #include "firmware_status_cache.h"
 #include "firmware_task_operator.h"
 #include "string_utils.h"
@@ -70,43 +71,70 @@ bool FirmwareDownloadDataProcessor::IsSpaceEnough(int64_t &requireTotalSize)
 
 void FirmwareDownloadDataProcessor::SetDownloadCallbackInfo(const FirmwareDownloadCallbackInfo &callbackInfo)
 {
-    GetTask();
-    uint32_t recordedProgress = downloadProgress_.percent;
-    downloadProgress_ = callbackInfo.taskProgress;
-    downloadProgress_.percent = std::max(downloadProgress_.percent, recordedProgress);
-    FIRMWARE_LOGI("SetDownloadProgress status: %{public}d progress: %{public}d", downloadProgress_.status,
-        downloadProgress_.percent);
+    std::string taskId;
+    Progress progress;
+    {
+        std::lock_guard<std::recursive_mutex> guard(GetFirmwareCancelMutex());
+        GetTask();
+        if (!tasks_.isExistTask || tasks_.status == UpgradeStatus::CHECK_VERSION_SUCCESS) {
+            FIRMWARE_LOGI("SetDownloadCallbackInfo discard, task canceled or not exists, status: %{public}d",
+                CAST_INT(tasks_.status));
+            return;
+        }
+        uint32_t recordedProgress = downloadProgress_.percent;
+        downloadProgress_ = callbackInfo.taskProgress;
+        downloadProgress_.percent = std::max(downloadProgress_.percent, recordedProgress);
+        FIRMWARE_LOGI("SetDownloadProgress status: %{public}d progress: %{public}d", downloadProgress_.status,
+            downloadProgress_.percent);
 
-    for (const auto &componentProgress : callbackInfo.progressList) {
-        FIRMWARE_LOGI("component versionId: %{public}s  status: %{public}d progress is: %{public}d",
-            componentProgress.versionId.c_str(), CAST_INT(componentProgress.progress.status),
-            CAST_INT(componentProgress.progress.percent));
-        componentOperator_.UpdateProgressByVersionId(componentProgress.versionId, componentProgress.progress.status,
-            CAST_INT(componentProgress.progress.percent));
+        for (const auto &componentProgress : callbackInfo.progressList) {
+            FIRMWARE_LOGI("component versionId: %{public}s  status: %{public}d progress is: %{public}d",
+                componentProgress.versionId.c_str(), CAST_INT(componentProgress.progress.status),
+                CAST_INT(componentProgress.progress.percent));
+            componentOperator_.UpdateProgressByVersionId(componentProgress.versionId,
+                componentProgress.progress.status, CAST_INT(componentProgress.progress.percent));
+        }
+        taskOperator_.UpdateProgressByTaskId(tasks_.taskId, downloadProgress_.status,
+            CAST_INT(downloadProgress_.percent));
+        taskId = tasks_.taskId;
+        progress = downloadProgress_;
     }
-    taskOperator_.UpdateProgressByTaskId(tasks_.taskId, downloadProgress_.status, CAST_INT(downloadProgress_.percent));
-
-    FirmwareCallbackUtils::GetInstance()->ProgressCallback(tasks_.taskId, downloadProgress_);
+    FirmwareCallbackUtils::GetInstance()->ProgressCallback(taskId, progress);
 }
 
 void FirmwareDownloadDataProcessor::SetDownloadEvent(const std::string &downloadTaskId, EventId eventId)
 {
-    GetTask();
+    std::string taskId;
+    int32_t progress = 0;
+    {
+        std::lock_guard<std::recursive_mutex> guard(GetFirmwareCancelMutex());
+        GetTask();
+        if (!tasks_.isExistTask || tasks_.status == UpgradeStatus::CHECK_VERSION_SUCCESS) {
+            FIRMWARE_LOGI("SetDownloadCallbackInfo discard, task canceled or not exists, status: %{public}d",
+                CAST_INT(tasks_.status));
+            return;
+        }
+        taskId = tasks_.taskId;
+        if (eventId == EventId::EVENT_DOWNLOAD_START) {
+            FIRMWARE_LOGI("SetDownloadEvent handle download start");
+            taskOperator_.UpdateDownloadTaskIdByTaskId(tasks_.taskId, downloadTaskId);
+            taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
+        } else if (eventId == EventId::EVENT_DOWNLOAD_RESUME) {
+            FIRMWARE_LOGI("SetDownloadEvent handle download resume");
+            taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
+            progress = tasks_.progress;
+        } else {
+            return;
+        }
+    }
     if (eventId == EventId::EVENT_DOWNLOAD_START) {
-        FIRMWARE_LOGI("SetDownloadEvent handle download start");
-        taskOperator_.UpdateDownloadTaskIdByTaskId(tasks_.taskId, downloadTaskId);
-        taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
-
-        FirmwareCallbackUtils::GetInstance()->NotifyEvent(tasks_.taskId, EventId::EVENT_DOWNLOAD_START,
+        FirmwareCallbackUtils::GetInstance()->NotifyEvent(taskId, EventId::EVENT_DOWNLOAD_START,
             UpgradeStatus::DOWNLOADING);
-        return;
     }
 
     if (eventId == EventId::EVENT_DOWNLOAD_RESUME) {
-        FIRMWARE_LOGI("SetDownloadEvent handle download resume");
-        taskOperator_.UpdateStatusByTaskId(tasks_.taskId, UpgradeStatus::DOWNLOADING);
-        FirmwareCallbackUtils::GetInstance()->NotifyEvent(tasks_.taskId, EventId::EVENT_DOWNLOAD_RESUME,
-            UpgradeStatus::DOWNLOADING, {}, {}, tasks_.progress);
+        FirmwareCallbackUtils::GetInstance()->NotifyEvent(taskId, EventId::EVENT_DOWNLOAD_RESUME,
+            UpgradeStatus::DOWNLOADING, {}, {}, progress);
     }
 }
 

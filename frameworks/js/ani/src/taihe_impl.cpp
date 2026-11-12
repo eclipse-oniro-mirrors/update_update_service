@@ -14,6 +14,7 @@
  */
 
 #include <map>
+#include <mutex>
 
 #include "ohos.update.proj.hpp"
 #include "ohos.update.impl.hpp"
@@ -141,16 +142,20 @@ public:
     }
 
 private:
-    std::shared_ptr<AniUpdater> GetAniUpdater()
-    {
-        if (!aniUpdatersMap_.count(upgradeInfo_)) {
-            aniUpdatersMap_[upgradeInfo_] = std::make_shared<AniUpdater>(upgradeInfo_);
-        }
-        return aniUpdatersMap_[upgradeInfo_];
-    }
-
+    static inline std::mutex aniUpdatersMapMutex_;
     static inline std::map<UpgradeInfo, std::shared_ptr<AniUpdater>> aniUpdatersMap_;
     UpgradeInfo upgradeInfo_;
+    std::shared_ptr<AniUpdater> GetAniUpdater()
+    {
+        std::lock_guard<std::mutex> lock(aniUpdatersMapMutex_);
+        auto iter = aniUpdatersMap_.find(upgradeInfo_);
+        if (iter != aniUpdatersMap_.end()) {
+            return iter->second;
+        }
+        auto aniUpdater = std::make_shared<AniUpdater>(upgradeInfo_);
+        aniUpdatersMap_.emplace(upgradeInfo_, aniUpdater);
+        return aniUpdater;
+    }
 };
 
 class RestorerImpl {
@@ -160,42 +165,38 @@ public:
     void FactoryResetSync()
     {
         ENGINE_LOGI("%{public}s method invoked", __func__);
-        if (aniRestorer_ == nullptr) {
-            aniRestorer_ = std::make_shared<AniRestorer>();
-        }
-        aniRestorer_->FactoryResetSync();
+        GetAniRestorer()->FactoryResetSync();
     }
 
     void ForceFactoryResetSync()
     {
         ENGINE_LOGI("%{public}s method invoked", __func__);
-        if (aniRestorer_ == nullptr) {
-            aniRestorer_ = std::make_shared<AniRestorer>();
-        }
-        aniRestorer_->ForceFactoryResetSync();
+        GetAniRestorer()->ForceFactoryResetSync();
     }
 
     void DeepFactoryResetSync(const ohos::update::FactoryResetStrategy &factoryResetStrategy)
     {
         ENGINE_LOGI("%{public}s method invoked", __func__);
-        if (aniRestorer_ == nullptr) {
-            aniRestorer_ = std::make_shared<AniRestorer>();
-        }
-        aniRestorer_->DeepFactoryResetSync(factoryResetStrategy);
+        GetAniRestorer()->DeepFactoryResetSync(factoryResetStrategy);
     }
 
     ohos::update::FactoryResetInfo GetDeepFactoryResetInfoSync(
         const ohos::update::FactoryResetStrategy &factoryResetStrategy)
     {
         ENGINE_LOGI("%{public}s method invoked", __func__);
-        if (aniRestorer_ == nullptr) {
-            aniRestorer_ = std::make_shared<AniRestorer>();
-        }
-        return aniRestorer_->GetDeepFactoryResetInfoSync(factoryResetStrategy);
+        return GetAniRestorer()->GetDeepFactoryResetInfoSync(factoryResetStrategy);
     }
 
 private:
     static inline std::shared_ptr<AniRestorer> aniRestorer_ = nullptr;
+    static inline std::once_flag aniRestorerFlag_;
+    std::shared_ptr<AniRestorer> GetAniRestorer()
+    {
+        std::call_once(aniRestorerFlag_, []() {
+            aniRestorer_ = std::make_shared<AniRestorer>();
+        });
+        return aniRestorer_;
+    }
 };
 
 class LocalUpdaterImpl {
@@ -233,15 +234,15 @@ public:
     }
 
 private:
+    static inline std::shared_ptr<AniLocalUpdater> localUpdater_ = nullptr;
+    static inline std::once_flag aniLocalUpdaterFlag_;
     std::shared_ptr<AniLocalUpdater> GetLocalUpdater()
     {
-        if (localUpdater_ == nullptr) {
+        std::call_once(aniLocalUpdaterFlag_, []() {
             localUpdater_ = std::make_shared<AniLocalUpdater>();
-        }
+        });
         return localUpdater_;
     }
-
-    static inline std::shared_ptr<AniLocalUpdater> localUpdater_ = nullptr;
 };
 
 ohos::update::Updater GetOnlineUpdater(const ohos::update::UpgradeInfo &upgradeInfo)

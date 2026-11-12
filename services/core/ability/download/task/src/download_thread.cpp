@@ -87,7 +87,7 @@ void DownloadThread::Start(bool isAsync)
         }
 
         // 标记下载线程启动, 用于识别取消下载时是否需要等待Curl结束
-        isStarted_ = true;
+        isStarted_.store(true);
 
         DownloadVersion();
         ffrtDownloadThreadMutex_.unlock();
@@ -106,36 +106,45 @@ void DownloadThread::Start(bool isAsync)
 DownloadResult DownloadThread::Stop()
 {
     ENGINE_LOGI("DownloadThread Stop, downloadId %{public}s", downloadInfo_.downloadId.c_str());
-    isNeedCancel_ = true;
+    isNeedCancel_.store(true);
     StopRequestAndSha256Calculate();
 
     // 下载已经启动后，需要等待Curl下载结束
-    if (isStarted_) {
+    if (isStarted_.load()) {
         std::unique_lock<std::mutex> uniqueLock(requestConditionMutex_);
         requestCondition_.wait_for(uniqueLock, std::chrono::milliseconds(REQUEST_CONDITION_WAIT_TIME_MILLS),
-            [this]() { return isRequestFinished_; });
+            [this]() { return isRequestFinished_.load(); });
     }
 
     ENGINE_LOGI(
         "DownloadThread Stop success, downloadId %{public}s, request finished %{public}s, download started %{public}s",
-        downloadInfo_.downloadId.c_str(), StringUtils::GetBoolStr(isRequestFinished_).c_str(),
-        StringUtils::GetBoolStr(isStarted_).c_str());
+        downloadInfo_.downloadId.c_str(), StringUtils::GetBoolStr(isRequestFinished_.load()).c_str(),
+        StringUtils::GetBoolStr(isStarted_.load()).c_str());
     return DownloadResult::SUCCESS;
+}
+
+void DownloadThread::SetRequestFinished(bool finished)
+{
+    {
+        std::lock_guard<std::mutex> lock(requestConditionMutex_);
+        isRequestFinished_.store(finished);
+    }
+    requestCondition_.notify_all();
 }
 
 DownloadResult DownloadThread::NetChangeToPause()
 {
     ENGINE_LOGI("DownloadThread NetChangeToPause");
-    if (status_ == DownloadStatus::INIT) {
+    if (status_.load() == DownloadStatus::INIT) {
         ENGINE_LOGI("thread is not started, callback pause status");
         CallbackDownload(DownloadStatus::AUTO_PAUSE, DownloadEndReason::NET_CHANGE);
         return DownloadResult::SUCCESS;
     }
-    if (status_ != DownloadStatus::DOWNLOADING) {
+    if (status_.load() != DownloadStatus::DOWNLOADING) {
         ENGINE_LOGI("NetChange to pause download, status not downloading");
         return DownloadResult::FAIL;
     }
-    isNeedAutoPause_ = true;
+    isNeedAutoPause_.store(true);
     request_.SetDownloadStopStatus(true);
     return DownloadResult::SUCCESS;
 }
@@ -148,13 +157,13 @@ void DownloadThread::SetDownloadCallback(OnDownloadCallback onDownloadCallback)
 void DownloadThread::DownloadVersion()
 {
     ENGINE_LOGI("DownloadVersion, download status %{public}d, downloadId %{public}s, package size %{public}" PRId64
-        ", downloaded size %{public}" PRId64 "",
-        CAST_INT(status_), downloadInfo_.downloadId.c_str(), downloadInfo_.packageSize, downloadInfo_.downloadedSize);
+    ", downloaded size %{public}" PRId64 "", CAST_INT(status_.load()), downloadInfo_.downloadId.c_str(),
+        downloadInfo_.packageSize, downloadInfo_.downloadedSize);
     if (!CheckBeforeStartDownload()) {
         return;
     }
 
-    status_ = DownloadStatus::DOWNLOADING;
+    status_.store(DownloadStatus::DOWNLOADING);
     percent_ = 0;
     CallbackDownload(DownloadStatus::DOWNLOADING);
     std::string errorMsg;
@@ -170,7 +179,7 @@ void DownloadThread::DownloadVersion()
 void DownloadThread::DoDownload()
 {
     downloadStartTime_ = TimeUtils::GetTimestampByMilliseconds();
-    isRequestFinished_ = false;
+    SetRequestFinished(false);
     auto weakThis = weak_from_this();
     DownloadRequestCallback callback{ [weakThis, this](int64_t dlTotal, int64_t dlNow) {
         const auto sharedPtr = weakThis.lock();
@@ -179,7 +188,7 @@ void DownloadThread::DoDownload()
             return;
         }
         if (!IsPackageSizeAbnormal(dlTotal, dlNow)) {
-            isNeedCancel_ = true;
+            isNeedCancel_.store(true);
             request_.SetDownloadStopStatus(true);
             HandleSizeError(dlTotal, DownloadEndReason::SIZE_ERROR);
             return;
@@ -200,7 +209,7 @@ void DownloadThread::DoDownload()
         return;
     }
     HandleDownloadFinish(response.result, response.status);
-    isRequestFinished_ = true;
+    SetRequestFinished(true);
 }
 
 void DownloadThread::CallbackDownload(DownloadStatus status, DownloadEndReason endReason,
@@ -291,11 +300,11 @@ DownloadResult DownloadThread::InitPackageParam(const char *fileName, std::strin
 void DownloadThread::HandleDownloadFinish(int curlRet, long responseCode)
 {
     ENGINE_LOGI("HandleDownloadFinish, downloadId %{public}s, curlRet %{public}d, response %{public}ld "
-        "isNeedAutoPause_ %{public}s",
-        downloadInfo_.downloadId.c_str(), curlRet, responseCode, StringUtils::GetBoolStr(isNeedAutoPause_).c_str());
+        "isNeedAutoPause_ %{public}s", downloadInfo_.downloadId.c_str(), curlRet, responseCode,
+        StringUtils::GetBoolStr(isNeedAutoPause_.load()).c_str());
     callbackInfo_.effectiveTime = TimeUtils::GetTimestampByMilliseconds() - downloadStartTime_ + lastEffectiveTime_;
-    if (isNeedAutoPause_) {
-        isNeedAutoPause_ = false;
+    if (isNeedAutoPause_.load()) {
+        isNeedAutoPause_.store(false);
         CallbackDownload(DownloadStatus::AUTO_PAUSE, DownloadEndReason::NET_CHANGE);
         return;
     }
@@ -312,7 +321,7 @@ void DownloadThread::HandleDownloadFinish(int curlRet, long responseCode)
 
 void DownloadThread::DoVerify()
 {
-    status_ = DownloadStatus::VERIFYING;
+    status_.store(DownloadStatus::VERIFYING);
     verifiedPercent_ = 0;
     CallbackDownload(DownloadStatus::VERIFYING);
 
@@ -362,7 +371,7 @@ void DownloadThread::DoVerify()
 
 void DownloadThread::CallbackVerifyProgress(int64_t fileSize, int64_t verifiedSize)
 {
-    if (isNeedCancel_) {
+    if (isNeedCancel_.load()) {
         return;
     }
     if (fileSize <= 0 || verifiedSize > fileSize) {
@@ -385,7 +394,7 @@ void DownloadThread::CallbackVerifyProgress(int64_t fileSize, int64_t verifiedSi
         ENGINE_LOGI("CallbackVerifyProgress, verifiedPercent = %{public}d, verifiedSize = %{public}" PRId64 ", "
             "fileSize = %{public}" PRId64 "",
             verifiedPercent, verifiedSize, fileSize);
-        status_ = DownloadStatus::VERIFYING;
+        status_.store(DownloadStatus::VERIFYING);
         verifiedPercent_ = verifiedPercent;
         CallbackDownload(DownloadStatus::VERIFYING);
     }
@@ -432,9 +441,9 @@ void DownloadThread::HandleNetworkCheck(int curlRet, long responseCode)
         CallbackDownload(DownloadStatus::AUTO_PAUSE, DownloadEndReason::NET_NOT_AVAILIABLE, dlErrorInfo);
         return;
     }
-    if (isNeedAutoPause_) {
+    if (isNeedAutoPause_.load()) {
         ENGINE_LOGI("HandleNetworkCheck isNeedAutoPause_ is true, callback NET_CHANGE");
-        isNeedAutoPause_ = false;
+        isNeedAutoPause_.store(false);
         CallbackDownload(DownloadStatus::AUTO_PAUSE, DownloadEndReason::NET_CHANGE, dlErrorInfo);
         return;
     }
@@ -454,7 +463,7 @@ void DownloadThread::CallbackProgress(int64_t dlTotal, int64_t dlNow)
     }
 
     downloadedSize_ = dlNow;
-    if (isDisableCallbackFlag_) {
+    if (isDisableCallbackFlag_.load()) {
         return;
     }
 
@@ -491,14 +500,14 @@ void DownloadThread::CallbackProgress(int64_t dlTotal, int64_t dlNow)
 
 void DownloadThread::SetDisableCallbackFlag(bool flag)
 {
-    isDisableCallbackFlag_ = flag;
+    isDisableCallbackFlag_.store(flag);
 }
 
 bool DownloadThread::NotifyCancel()
 {
     // 如果取消/暂停下载，直接在对应的方法通过通知后同步回调
-    if (isNeedCancel_) {
-        isRequestFinished_ = true;
+    if (isNeedCancel_.load()) {
+        isRequestFinished_.store(true);
         std::unique_lock<std::mutex> uniqueLock(requestConditionMutex_);
         requestCondition_.notify_all();
         ENGINE_LOGI("NotifyCancel end");

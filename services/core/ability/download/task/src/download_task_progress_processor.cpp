@@ -42,11 +42,34 @@ DownloadTaskProgressProcessor::~DownloadTaskProgressProcessor()
     downloadInfos_.clear();
 }
 
-ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
+void DownloadTaskProgressProcessor::SetSnapshotProvider(DownloadInfoSnapshotProvider provider)
 {
     std::lock_guard<std::mutex> lockGuard(updateMutex_);
+    snapshotProvider_ = std::move(provider);
+}
+
+ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
+{
+    DownloadInfoSnapshotProvider provider;
+    {
+        std::lock_guard<std::mutex> lockGuard(updateMutex_);
+        provider = snapshotProvider_;
+    }
+    std::vector<DownloadInfo> snapshot;
+    if (provider != nullptr) {
+        snapshot = provider();
+    } else {
+        snapshot.reserve(downloadInfos_.size());
+        for (const auto &info : downloadInfos_) {
+            if (info == nullptr) {
+                continue;
+            }
+            snapshot.emplace_back(*info);
+        }
+    }
+    std::lock_guard<std::mutex> lockGuard(updateMutex_);
     // 先更新状态
-    Update();
+    Update(snapshot);
 
     ProgressInfo progressInfo;
     progressInfo.packageSize = packageSize_;
@@ -56,36 +79,30 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
     progressInfo.taskStatus = status_;
     progressInfo.reason = endReason_;
 
-    for (const auto &downloadInfo : downloadInfos_) {
-        if (downloadInfo == nullptr) {
-            continue;
-        }
-        progressInfo.progresses.emplace_back(*downloadInfo);
+    for (const auto &downloadInfo : snapshot) {
+        progressInfo.progresses.emplace_back(downloadInfo);
     }
     ENGINE_LOGI("GetTaskProgress, taskId %{public}s, progress info %{public}s", taskId_.c_str(),
         progressInfo.ToString().c_str());
     return progressInfo;
 }
 
-void DownloadTaskProgressProcessor::Update()
+void DownloadTaskProgressProcessor::Update(const std::vector<DownloadInfo> &snapshot)
 {
     ENGINE_LOGD("Update task status");
     int64_t downloadSize = 0;
     int64_t verifiedSize = 0;
     std::map<DownloadStatus, int32_t> countMap;
     std::map<DownloadStatus, DownloadEndReason> endReasonMap;
-    for (const auto &info : downloadInfos_) {
-        if (info == nullptr) {
-            continue;
-        }
-        downloadSize += info->downloadedSize;
-        verifiedSize += info->verifiedSize;
-        const auto &taskStatus = info->GetTaskStatus();
+    for (const auto &info : snapshot) {
+        downloadSize += info.downloadedSize;
+        verifiedSize += info.verifiedSize;
+        const auto &taskStatus = info.GetTaskStatus();
         if (!countMap.count(taskStatus)) {
             countMap[taskStatus] = 0;
         }
         countMap[taskStatus]++;
-        endReasonMap[taskStatus] = info->endReason;
+        endReasonMap[taskStatus] = info.endReason;
     }
     downloadedSize_ = downloadSize;
     verifiedSize_ = verifiedSize;

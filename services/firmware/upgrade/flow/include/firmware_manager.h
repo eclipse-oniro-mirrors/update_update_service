@@ -16,6 +16,8 @@
 #ifndef FIRMWARE_MANAGER_H
 #define FIRMWARE_MANAGER_H
 
+#include <mutex>
+
 #include "singleton.h"
 
 #include "business_error.h"
@@ -32,6 +34,7 @@
 
 namespace OHOS {
 namespace UpdateService {
+std::recursive_mutex &GetFirmwareCancelMutex();
 class FirmwareManager : public DelayedSingleton<FirmwareManager> {
     DECLARE_DELAYED_SINGLETON(FirmwareManager);
 
