@@ -460,14 +460,13 @@ void DownloadService::UpdateDownloadProgress(DownloadCallbackInfo info)
         // 非失败场景下，无需进行重试，直接向上层回调进度
         if (info.status != DownloadStatus::FAIL) {
             UpdateDownloadInfo(info);
-            // CallbackDownloadProgress(info);
             isNeedCallback = true;
         } else {
             // 失败场景下，根据失败情况进行重试下载
             const auto downloadInfo = GetDownloadInfo(info.downloadId);
             if (downloadInfo == nullptr) {
                 ENGINE_LOGE("UpdateDownloadProgress abort, download info not found, downloadId %{public}s",
-                info.downloadId.c_str());
+                    info.downloadId.c_str());
                 return;
             }
 
