@@ -55,21 +55,21 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
         std::lock_guard<std::mutex> lockGuard(updateMutex_);
         provider = snapshotProvider_;
     }
-    std::vector<DownloadInfo> snapshot;
+    std::vector<DownloadInfo> snapDownloadInfoList;
     if (provider != nullptr) {
-        snapshot = provider();
+        snapDownloadInfoList = provider();
     } else {
-        snapshot.reserve(downloadInfos_.size());
+        snapDownloadInfoList.reserve(downloadInfos_.size());
         for (const auto &info : downloadInfos_) {
             if (info == nullptr) {
                 continue;
             }
-            snapshot.emplace_back(*info);
+            snapDownloadInfoList.emplace_back(*info);
         }
     }
     std::lock_guard<std::mutex> lockGuard(updateMutex_);
     // 先更新状态
-    Update(snapshot);
+    Update(snapDownloadInfoList);
 
     ProgressInfo progressInfo;
     progressInfo.packageSize = packageSize_;
@@ -79,7 +79,7 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
     progressInfo.taskStatus = status_;
     progressInfo.reason = endReason_;
 
-    for (const auto &downloadInfo : snapshot) {
+    for (const auto &downloadInfo : snapDownloadInfoList) {
         progressInfo.progresses.emplace_back(downloadInfo);
     }
     ENGINE_LOGI("GetTaskProgress, taskId %{public}s, progress info %{public}s", taskId_.c_str(),
@@ -87,14 +87,14 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
     return progressInfo;
 }
 
-void DownloadTaskProgressProcessor::Update(const std::vector<DownloadInfo> &snapshot)
+void DownloadTaskProgressProcessor::Update(const std::vector<DownloadInfo> &snapDownloadInfoList)
 {
     ENGINE_LOGD("Update task status");
     int64_t downloadSize = 0;
     int64_t verifiedSize = 0;
     std::map<DownloadStatus, int32_t> countMap;
     std::map<DownloadStatus, DownloadEndReason> endReasonMap;
-    for (const auto &info : snapshot) {
+    for (const auto &info : snapDownloadInfoList) {
         downloadSize += info.downloadedSize;
         verifiedSize += info.verifiedSize;
         const auto &taskStatus = info.GetTaskStatus();

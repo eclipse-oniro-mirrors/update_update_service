@@ -35,7 +35,7 @@ public:
     void SetSnapshotProvider(DownloadInfoSnapshotProvider provider);
 
 private:
-    void Update(const std::vector<DownloadInfo> &snapshot);
+    void Update(const std::vector<DownloadInfo> &snapDownloadInfoList);
     [[nodiscard]] int32_t CalcDownloadProgress() const;
     [[nodiscard]] DownloadStatus CalcDownloadTaskStatus(const std::map<DownloadStatus, int32_t> &countMap) const;
     [[nodiscard]] int32_t GetStatusCount(const std::map<DownloadStatus, int32_t> &countMap,

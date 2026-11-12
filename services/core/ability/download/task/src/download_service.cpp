@@ -212,18 +212,18 @@ void DownloadService::DeleteDownloadedFiles()
 void DownloadService::NotifyCancelCompleted()
 {
     ENGINE_LOGI("NotifyCancelCompleted, taskId %{public}s", taskId_.c_str());
-    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfo;
+    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfoList;
     {
         std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        snapDownloadInfo.reserve(serviceDownloadInfoMap_.size());
+        snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
         for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
             if (downloadInfo == nullptr) {
                 continue;
             }
-            snapDownloadInfo.emplace_back(downloadInfo);
+            snapDownloadInfoList.emplace_back(downloadInfo);
         }
     }
-    for (const auto &downloadInfo : snapDownloadInfo) {
+    for (const auto &downloadInfo : snapDownloadInfoList) {
         // 组装取消回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -243,19 +243,19 @@ void DownloadService::NotifyCancelCompleted()
 void DownloadService::NotifyPauseCompleted()
 {
     ENGINE_LOGI("NotifyPauseCompleted, taskId %{public}s", taskId_.c_str());
-    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfo;
+    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfoList;
     {
         std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        snapDownloadInfo.reserve(serviceDownloadInfoMap_.size());
+        snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
         for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
             if (downloadInfo == nullptr) {
                 ENGINE_LOGE("NotifyPauseCompleted, skip empty download task");
                 continue;
             }
-            snapDownloadInfo.emplace_back(downloadInfo);
+            snapDownloadInfoList.emplace_back(downloadInfo);
         }
     }
-    for (const auto &downloadInfo : snapDownloadInfo) {
+    for (const auto &downloadInfo : snapDownloadInfoList) {
         // 组装暂停回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -272,19 +272,19 @@ void DownloadService::NotifyPauseCompleted()
 void DownloadService::NotifyRecoverCompleted()
 {
     ENGINE_LOGI("NotifyRecoverCompleted, taskId %{public}s", taskId_.c_str());
-    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfo;
+    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfoList;
     {
         std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        snapDownloadInfo.reserve(serviceDownloadInfoMap_.size());
+        snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
         for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
             if (downloadInfo == nullptr) {
                 ENGINE_LOGE("NotifyRecoverCompleted, skip empty download task");
                 continue;
             }
-            snapDownloadInfo.emplace_back(downloadInfo);
+            snapDownloadInfoList.emplace_back(downloadInfo);
         }
     }
-    for (const auto &downloadInfo : snapDownloadInfo) {
+    for (const auto &downloadInfo : snapDownloadInfoList) {
         // 已下载完成的不用再通知
         if (downloadInfo->IsCompleted()) {
             ENGINE_LOGI(
@@ -503,15 +503,15 @@ void DownloadService::UpdateDownloadProgress(DownloadCallbackInfo info)
 std::vector<DownloadInfo> DownloadService::SnapshotDownloadInfos()
 {
     std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-    std::vector<DownloadInfo> snapshot;
-    snapshot.reserve(serviceDownloadInfoMap_.size());
+    std::vector<DownloadInfo> snapDownloadInfoList;
+    snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
     for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
         if (downloadInfo == nullptr) {
             continue;
         }
-        snapshot.emplace_back(*downloadInfo);
+        snapDownloadInfoList.emplace_back(*downloadInfo);
     }
-    return snapshot;
+    return snapDownloadInfoList;
 }
 
 std::shared_ptr<DownloadInfo> DownloadService::UpdateDownloadInfo(const DownloadCallbackInfo &info)
