@@ -156,6 +156,28 @@ int32_t UpdateService::GetDeepFactoryResetInfo(const FactoryResetStrategy &facto
     return restorer->GetDeepFactoryResetInfo(factoryResetStrategy, factoryResetInfo, businessError);
 }
 
+int32_t UpdateService::ApplyNewVersion(const UpgradeInfo &info, const std::string &miscFile,
+    const std::vector<std::string> &packageNames, BusinessError &businessError, int32_t &funcResult)
+{
+    sptr<UpdateServiceLocalUpdater> localUpdater = sptr<UpdateServiceLocalUpdater>::MakeSptr();
+    if (localUpdater == nullptr) {
+        ENGINE_LOGI("ApplyNewVersion localUpdater null");
+        return INT_CALL_FAIL;
+    }
+    return localUpdater->ApplyNewVersion(info, miscFile, packageNames, businessError);
+}
+
+int32_t UpdateService::VerifyUpgradePackage(const std::string &packagePath, const std::string &keyPath,
+    BusinessError &businessError, int32_t &funcResult)
+{
+    sptr<UpdateServiceLocalUpdater> localUpdater = sptr<UpdateServiceLocalUpdater>::MakeSptr();
+    if (localUpdater == nullptr) {
+        ENGINE_LOGI("VerifyUpgradePackage localUpdater null");
+        return INT_CALL_FAIL;
+    }
+    return localUpdater->VerifyUpgradePackage(packagePath, keyPath, businessError);
+}
+
 void BuildUpgradeInfoDump(const int fd, UpgradeInfo &info)
 {
     dprintf(fd, "---------------------upgrade info info--------------------\n");
