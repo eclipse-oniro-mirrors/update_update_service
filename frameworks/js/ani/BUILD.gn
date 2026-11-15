@@ -28,6 +28,7 @@ taihe_generated_file_path = "$taihe_file_path/out/$subsystem_name/$part_name"
 ohos_taihe("run_taihe_update") {
   taihe_generated_file_path = "$taihe_generated_file_path"
   deps = [ ":copy_update_framework" ]
+  use_ats = true
   outputs = [
     "$taihe_generated_file_path/src/ohos.update.ani.cpp",
     "$taihe_generated_file_path/src/ohos.update.abi.c",
@@ -90,7 +91,7 @@ taihe_shared_library("update_ani") {
 
 generate_static_abc("update_framework_abc") {
   base_url = "$taihe_generated_file_path"
-  files = [ "$taihe_generated_file_path/@ohos.update.ets" ]
+  files = [ "$taihe_generated_file_path/@ohos.update.ats" ]
   is_boot_abc = "True"
   dst_file = "$target_out_dir/update_ani.abc"
   out_puts = [ "$target_out_dir/update_ani.abc" ]
