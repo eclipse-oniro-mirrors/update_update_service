@@ -43,10 +43,6 @@ DownloadTask::DownloadTask(const std::string &taskId, std::vector<DownloadInfo> 
     InitDownloadInfo(downloadInfos);
 
     downloadService_ = std::make_unique<DownloadService>(taskId, downloadInfoMap_);
-    if (taskProgressProcessor_ != nullptr && downloadService_ != nullptr) {
-        taskProgressProcessor_->SetSnapshotProvider(
-            [downloadService = downloadService_.get()]() { return downloadService->SnapshotDownloadInfos(); });
-    }
 }
 
 DownloadTask::~DownloadTask()

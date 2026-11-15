@@ -33,6 +33,7 @@ FirmwareStatusCache::~FirmwareStatusCache()
 
 bool FirmwareStatusCache::IsChecking()
 {
+    std::lock_guard<std::recursive_mutex> guard(firmwareStatusMutex_);
     if (statusCache_ == nullptr) {
         return false;
     }
@@ -41,6 +42,7 @@ bool FirmwareStatusCache::IsChecking()
 
 void FirmwareStatusCache::SetIsChecking(bool isChecking)
 {
+    std::lock_guard<std::recursive_mutex> guard(firmwareStatusMutex_);
     if (statusCache_ == nullptr) {
         return;
     }
@@ -49,6 +51,7 @@ void FirmwareStatusCache::SetIsChecking(bool isChecking)
 
 bool FirmwareStatusCache::IsDownloadTriggered()
 {
+    std::lock_guard<std::recursive_mutex> guard(firmwareStatusMutex_);
     if (statusCache_ == nullptr) {
         return false;
     }
@@ -57,6 +60,7 @@ bool FirmwareStatusCache::IsDownloadTriggered()
 
 bool FirmwareStatusCache::IsUpgradeTriggered()
 {
+    std::lock_guard<std::recursive_mutex> guard(firmwareStatusMutex_);
     if (statusCache_ == nullptr) {
         return false;
     }

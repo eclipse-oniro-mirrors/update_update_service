@@ -57,12 +57,6 @@ constexpr int32_t PROCESS_EXIT_DELAY_TIME = 1; // 进程退出等待时间，单
 constexpr uint64_t PULLUP_AFTER_TERMINATE_INTERVAL = 5; // 终止升级后SA拉起间隔
 constexpr int64_t MIN_SCHEDULE_TIME = 0L;
 
-std::recursive_mutex &GetFirmwareCancelMutex()
-{
-    static std::recursive_mutex firmwareCancelMutex;
-    return firmwareCancelMutex;
-}
-
 FirmwareManager::FirmwareManager() {}
 
 FirmwareManager::~FirmwareManager()
@@ -177,24 +171,20 @@ bool FirmwareManager::Exit()
 void FirmwareManager::DoCancel(BusinessError &businessError)
 {
     FirmwareTask task;
-    {
-        std::lock_guard<std::recursive_mutex> guard(GetFirmwareCancelMutex());
-        FirmwareTaskOperator().QueryTask(task);
-        FIRMWARE_LOGI("DoCancelDownload task status: %{public}d", CAST_INT(task.status));
-        if (!task.isExistTask) {
-            FIRMWARE_LOGI("DoCancel no task");
-            businessError.Build(CallResult::FAIL, "no download task to cancel!");
-            businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR), "no download task to cancel!");
-            return;
-        }
+    FirmwareTaskOperator().QueryTask(task);
+    FIRMWARE_LOGI("DoCancelDownload task status: %{public}d", CAST_INT(task.status));
+    if (!task.isExistTask) {
+        FIRMWARE_LOGI("DoCancel no task");
+        businessError.Build(CallResult::FAIL, "no download task to cancel!");
+        businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR), "no download task to cancel!");
+        return;
+    }
 
-        if (task.status != UpgradeStatus::DOWNLOADING && task.status != UpgradeStatus::DOWNLOAD_SUCCESS &&
-            task.status != UpgradeStatus::DOWNLOAD_PAUSE) {
-            businessError.Build(CallResult::FAIL, "download task status invalid");
-            businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR),
-                "download task status invalid!");
-            return;
-        }
+    if (task.status != UpgradeStatus::DOWNLOADING && task.status != UpgradeStatus::DOWNLOAD_SUCCESS &&
+        task.status != UpgradeStatus::DOWNLOAD_PAUSE) {
+        businessError.Build(CallResult::FAIL, "download task status invalid");
+        businessError.AddErrorMessage(CAST_INT(DUPDATE_ERR_DOWNLOAD_COMMON_ERROR), "download task status invalid!");
+        return;
     }
 
     if (task.status == UpgradeStatus::DOWNLOADING) {
@@ -207,18 +197,15 @@ void FirmwareManager::DoCancel(BusinessError &businessError)
             businessError.AddErrorMessage(CAST_INT(downloadError.endReason), "cancel download error!");
         }
     }
+    FirmwareTaskOperator().UpdateProgressByTaskId(task.taskId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
 
-    {
-        std::lock_guard<std::recursive_mutex> guard(GetFirmwareCancelMutex());
-        FirmwareTaskOperator().UpdateProgressByTaskId(task.taskId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
-
-        std::vector<FirmwareComponent> components;
-        FirmwareComponentOperator componentOperator;
-        componentOperator.QueryAll(components);
-        for (const auto &component : components) {
-            componentOperator.UpdateProgressByVersionId(component.versionId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
-        }
+    std::vector<FirmwareComponent> components;
+    FirmwareComponentOperator componentOperator;
+    componentOperator.QueryAll(components);
+    for (const auto &component : components) {
+        componentOperator.UpdateProgressByVersionId(component.versionId, UpgradeStatus::CHECK_VERSION_SUCCESS, 0);
     }
+
     DownloadError downloadError;
     DownloadTaskManager::GetInstance()->RemoveTask(task.downloadTaskId, downloadError);
 }

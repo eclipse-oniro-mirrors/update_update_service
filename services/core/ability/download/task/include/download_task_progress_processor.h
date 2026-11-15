@@ -16,7 +16,6 @@
 #ifndef DOWNLOAD_TASK_PROGRESS_PROCESSOR_H
 #define DOWNLOAD_TASK_PROGRESS_PROCESSOR_H
 
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -25,17 +24,15 @@
 #include "download_common.h"
 
 namespace OHOS::UpdateService {
-using DownloadInfoSnapshotProvider = std::function<std::vector<DownloadInfo>()>;
 class DownloadTaskProgressProcessor {
 public:
     explicit DownloadTaskProgressProcessor(const std::vector<std::shared_ptr<DownloadInfo>> &downloadInfos);
     ~DownloadTaskProgressProcessor();
 
     ProgressInfo GetTaskProgress();
-    void SetSnapshotProvider(DownloadInfoSnapshotProvider provider);
 
 private:
-    void Update(const std::vector<DownloadInfo> &snapDownloadInfoList);
+    void Update();
     [[nodiscard]] int32_t CalcDownloadProgress() const;
     [[nodiscard]] DownloadStatus CalcDownloadTaskStatus(const std::map<DownloadStatus, int32_t> &countMap) const;
     [[nodiscard]] int32_t GetStatusCount(const std::map<DownloadStatus, int32_t> &countMap,
@@ -56,7 +53,6 @@ private:
 
     std::mutex updateMutex_;
     std::string taskId_;
-    DownloadInfoSnapshotProvider snapshotProvider_ = nullptr;
 };
 } // namespace OHOS::UpdateService
 #endif // DOWNLOAD_TASK_PROGRESS_PROCESSOR_H

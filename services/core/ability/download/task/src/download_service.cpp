@@ -212,18 +212,7 @@ void DownloadService::DeleteDownloadedFiles()
 void DownloadService::NotifyCancelCompleted()
 {
     ENGINE_LOGI("NotifyCancelCompleted, taskId %{public}s", taskId_.c_str());
-    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfoList;
-    {
-        std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
-        for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
-            if (downloadInfo == nullptr) {
-                continue;
-            }
-            snapDownloadInfoList.emplace_back(downloadInfo);
-        }
-    }
-    for (const auto &downloadInfo : snapDownloadInfoList) {
+    for (const auto &downloadInfo : serviceDownloadInfoMap_) {
         // 组装取消回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -243,19 +232,7 @@ void DownloadService::NotifyCancelCompleted()
 void DownloadService::NotifyPauseCompleted()
 {
     ENGINE_LOGI("NotifyPauseCompleted, taskId %{public}s", taskId_.c_str());
-    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfoList;
-    {
-        std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
-        for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
-            if (downloadInfo == nullptr) {
-                ENGINE_LOGE("NotifyPauseCompleted, skip empty download task");
-                continue;
-            }
-            snapDownloadInfoList.emplace_back(downloadInfo);
-        }
-    }
-    for (const auto &downloadInfo : snapDownloadInfoList) {
+    for (const auto &downloadInfo : serviceDownloadInfoMap_) {
         // 组装暂停回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -272,19 +249,7 @@ void DownloadService::NotifyPauseCompleted()
 void DownloadService::NotifyRecoverCompleted()
 {
     ENGINE_LOGI("NotifyRecoverCompleted, taskId %{public}s", taskId_.c_str());
-    std::vector<std::shared_ptr<DownloadInfo>> snapDownloadInfoList;
-    {
-        std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
-        for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
-            if (downloadInfo == nullptr) {
-                ENGINE_LOGE("NotifyRecoverCompleted, skip empty download task");
-                continue;
-            }
-            snapDownloadInfoList.emplace_back(downloadInfo);
-        }
-    }
-    for (const auto &downloadInfo : snapDownloadInfoList) {
+    for (const auto &downloadInfo : serviceDownloadInfoMap_) {
         // 已下载完成的不用再通知
         if (downloadInfo->IsCompleted()) {
             ENGINE_LOGI(
@@ -498,20 +463,6 @@ void DownloadService::UpdateDownloadProgress(DownloadCallbackInfo info)
     if (isNeedCallback) {
         CallbackDownloadProgress(info);
     }
-}
-
-std::vector<DownloadInfo> DownloadService::SnapshotDownloadInfos()
-{
-    std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-    std::vector<DownloadInfo> snapDownloadInfoList;
-    snapDownloadInfoList.reserve(serviceDownloadInfoMap_.size());
-    for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
-        if (downloadInfo == nullptr) {
-            continue;
-        }
-        snapDownloadInfoList.emplace_back(*downloadInfo);
-    }
-    return snapDownloadInfoList;
 }
 
 std::shared_ptr<DownloadInfo> DownloadService::UpdateDownloadInfo(const DownloadCallbackInfo &info)

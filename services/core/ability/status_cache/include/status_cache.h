@@ -17,7 +17,6 @@
 #define STATUS_CACHE_H
 
 #include <cstdint>
-#include <mutex>
 
 #include "time_utils_proxy.h"
 
@@ -41,7 +40,6 @@ private:
     int64_t lastCheckTime_ = -1;
     int64_t lastDownloadTime_ = -1;
     int64_t lastUpgradeTime_ = -1;
-    std::mutex statusCacheMutex_;
 };
 } // namespace UpdateService
 } // namespace OHOS

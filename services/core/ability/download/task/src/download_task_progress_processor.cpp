@@ -42,34 +42,12 @@ DownloadTaskProgressProcessor::~DownloadTaskProgressProcessor()
     downloadInfos_.clear();
 }
 
-void DownloadTaskProgressProcessor::SetSnapshotProvider(DownloadInfoSnapshotProvider provider)
-{
-    std::lock_guard<std::mutex> lockGuard(updateMutex_);
-    snapshotProvider_ = std::move(provider);
-}
-
 ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
 {
-    DownloadInfoSnapshotProvider provider;
-    {
-        std::lock_guard<std::mutex> lockGuard(updateMutex_);
-        provider = snapshotProvider_;
-    }
-    std::vector<DownloadInfo> snapDownloadInfoList;
-    if (provider != nullptr) {
-        snapDownloadInfoList = provider();
-    } else {
-        snapDownloadInfoList.reserve(downloadInfos_.size());
-        for (const auto &info : downloadInfos_) {
-            if (info == nullptr) {
-                continue;
-            }
-            snapDownloadInfoList.emplace_back(*info);
-        }
-    }
+
     std::lock_guard<std::mutex> lockGuard(updateMutex_);
     // 先更新状态
-    Update(snapDownloadInfoList);
+    Update();
 
     ProgressInfo progressInfo;
     progressInfo.packageSize = packageSize_;
@@ -79,7 +57,7 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
     progressInfo.taskStatus = status_;
     progressInfo.reason = endReason_;
 
-    for (const auto &downloadInfo : snapDownloadInfoList) {
+    for (const auto &downloadInfo : downloadInfos_) {
         progressInfo.progresses.emplace_back(downloadInfo);
     }
     ENGINE_LOGI("GetTaskProgress, taskId %{public}s, progress info %{public}s", taskId_.c_str(),
@@ -87,22 +65,25 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
     return progressInfo;
 }
 
-void DownloadTaskProgressProcessor::Update(const std::vector<DownloadInfo> &snapDownloadInfoList)
+void DownloadTaskProgressProcessor::Update()
 {
     ENGINE_LOGD("Update task status");
     int64_t downloadSize = 0;
     int64_t verifiedSize = 0;
     std::map<DownloadStatus, int32_t> countMap;
     std::map<DownloadStatus, DownloadEndReason> endReasonMap;
-    for (const auto &info : snapDownloadInfoList) {
-        downloadSize += info.downloadedSize;
-        verifiedSize += info.verifiedSize;
-        const auto &taskStatus = info.GetTaskStatus();
+    for (const auto &info : downloadInfos_) {
+        if (info == nullptr) {
+            continue;
+        }
+        downloadSize += info->downloadedSize;
+        verifiedSize += info->verifiedSize;
+        const auto &taskStatus = info->GetTaskStatus();
         if (!countMap.count(taskStatus)) {
             countMap[taskStatus] = 0;
         }
         countMap[taskStatus]++;
-        endReasonMap[taskStatus] = info.endReason;
+        endReasonMap[taskStatus] = info->endReason;
     }
     downloadedSize_ = downloadSize;
     verifiedSize_ = verifiedSize;

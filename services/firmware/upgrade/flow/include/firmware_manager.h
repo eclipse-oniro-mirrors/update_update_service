@@ -34,7 +34,6 @@
 
 namespace OHOS {
 namespace UpdateService {
-std::recursive_mutex &GetFirmwareCancelMutex();
 class FirmwareManager : public DelayedSingleton<FirmwareManager> {
     DECLARE_DELAYED_SINGLETON(FirmwareManager);
 

@@ -23,7 +23,6 @@ namespace OHOS {
 namespace UpdateService {
 bool StatusCache::IsChecking()
 {
-    std::lock_guard<std::mutex> guard(statusCacheMutex_);
     if (lastCheckTime_ != -1 && abs(GetCurrentTime() - lastCheckTime_) > Constant::FIVE_MINUTES_SECONDS) {
         // 当前时间与上次检测时间间隔超过5分钟，允许再次触发搜包
         return false;
@@ -33,7 +32,6 @@ bool StatusCache::IsChecking()
 
 void StatusCache::SetIsChecking(bool isChecking)
 {
-    std::lock_guard<std::mutex> guard(statusCacheMutex_);
     isChecking_ = isChecking;
     if (isChecking_) {
         lastCheckTime_ = GetCurrentTime();
@@ -51,7 +49,6 @@ int64_t StatusCache::GetCurrentTime()
 
 bool StatusCache::IsDownloadTriggered()
 {
-    std::lock_guard<std::mutex> guard(statusCacheMutex_);
     if (lastDownloadTime_ == -1) {
         lastDownloadTime_ = TimeUtils::GetTimestampByMilliseconds();
         return false;
@@ -68,7 +65,6 @@ bool StatusCache::IsDownloadTriggered()
 
 bool StatusCache::IsUpgradeTriggered()
 {
-    std::lock_guard<std::mutex> guard(statusCacheMutex_);
     if (lastUpgradeTime_ == -1) {
         lastUpgradeTime_ = TimeUtils::GetTimestampByMilliseconds();
         return false;
