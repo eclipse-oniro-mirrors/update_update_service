@@ -16,8 +16,6 @@
 #ifndef FIRMWARE_MANAGER_H
 #define FIRMWARE_MANAGER_H
 
-#include <mutex>
-
 #include "singleton.h"
 
 #include "business_error.h"

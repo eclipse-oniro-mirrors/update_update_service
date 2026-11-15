@@ -212,7 +212,7 @@ void DownloadService::DeleteDownloadedFiles()
 void DownloadService::NotifyCancelCompleted()
 {
     ENGINE_LOGI("NotifyCancelCompleted, taskId %{public}s", taskId_.c_str());
-    for (const auto &downloadInfo : serviceDownloadInfoMap_) {
+    for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
         // 组装取消回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -232,7 +232,7 @@ void DownloadService::NotifyCancelCompleted()
 void DownloadService::NotifyPauseCompleted()
 {
     ENGINE_LOGI("NotifyPauseCompleted, taskId %{public}s", taskId_.c_str());
-    for (const auto &downloadInfo : serviceDownloadInfoMap_) {
+    for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
         // 组装暂停回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -249,7 +249,7 @@ void DownloadService::NotifyPauseCompleted()
 void DownloadService::NotifyRecoverCompleted()
 {
     ENGINE_LOGI("NotifyRecoverCompleted, taskId %{public}s", taskId_.c_str());
-    for (const auto &downloadInfo : serviceDownloadInfoMap_) {
+    for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
         // 已下载完成的不用再通知
         if (downloadInfo->IsCompleted()) {
             ENGINE_LOGI(

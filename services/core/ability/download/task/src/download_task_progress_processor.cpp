@@ -44,7 +44,6 @@ DownloadTaskProgressProcessor::~DownloadTaskProgressProcessor()
 
 ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
 {
-
     std::lock_guard<std::mutex> lockGuard(updateMutex_);
     // 先更新状态
     Update();
@@ -58,6 +57,9 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
     progressInfo.reason = endReason_;
 
     for (const auto &downloadInfo : downloadInfos_) {
+        if (downloadInfo == nullptr) {
+            continue;
+        }
         progressInfo.progresses.emplace_back(downloadInfo);
     }
     ENGINE_LOGI("GetTaskProgress, taskId %{public}s, progress info %{public}s", taskId_.c_str(),
