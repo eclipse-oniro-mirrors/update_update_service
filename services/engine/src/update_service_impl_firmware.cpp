@@ -44,7 +44,7 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
     wptr<UpdateServiceImplFirmware> weakPtr(this);
     std::shared_ptr<BusinessError> businessErrorSptr = std::make_shared<BusinessError>();
     std::shared_ptr<CheckResult> checkResultSptr = std::make_shared<CheckResult>();
-    std::shared_ptr<std::atomic<bool>> checkCompleteSptr = std::make_shared<std::atomic<boo>>(false);
+    std::shared_ptr<std::atomic<bool>> checkCompleteSptr = std::make_shared<std::atomic<bool>>(false);
     FirmwareManager::GetInstance()->DoCheck(
         [businessErrorSptr, checkResultSptr, weakPtr](BusinessError &error, CheckResult &result) {
             sptr<UpdateServiceImplFirmware> firmwareSptr = weakPtr.promote();
@@ -63,7 +63,7 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
     std::unique_lock<std::mutex> lock(checkNewVersionMutex_);
     constexpr int32_t waitTime = 40;
     bool completed = conditionVariable_.wait_for(lock, std::chrono::seconds(waitTime),
-        [checkCompleteSptr] { return checkCompleteSptr.load(); });
+        [checkCompleteSptr] { return checkCompleteSptr->load(); });
     lock.unlock();
     if (!completed) {
         FIRMWARE_LOGE("CheckNewVersion is time out");
