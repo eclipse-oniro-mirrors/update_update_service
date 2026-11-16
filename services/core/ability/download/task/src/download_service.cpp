@@ -233,6 +233,11 @@ void DownloadService::NotifyPauseCompleted()
 {
     ENGINE_LOGI("NotifyPauseCompleted, taskId %{public}s", taskId_.c_str());
     for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
+        if (downloadInfo == nullptr) {
+            ENGINE_LOGE("NotifyPauseCompleted, skip empty download task");
+            continue;
+        }
+
         // 组装暂停回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -250,6 +255,11 @@ void DownloadService::NotifyRecoverCompleted()
 {
     ENGINE_LOGI("NotifyRecoverCompleted, taskId %{public}s", taskId_.c_str());
     for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
+        if (downloadInfo == nullptr) {
+            ENGINE_LOGE("NotifyRecoverCompleted, skip empty download task");
+            continue;
+        }
+
         // 已下载完成的不用再通知
         if (downloadInfo->IsCompleted()) {
             ENGINE_LOGI(
@@ -415,54 +425,55 @@ void DownloadService::CallbackUpdateDownloadProgress(DownloadCallbackInfo info)
 void DownloadService::UpdateDownloadProgress(DownloadCallbackInfo info)
 {
     // 非下载中、校验中状态，下载线程已经结束，移除下载线程
-    bool isNeedCallback = false;
-    {
-        std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
-        if (info.status != DownloadStatus::DOWNLOADING && info.status != DownloadStatus::VERIFYING) {
-            RemoveThread(info.downloadId);
-        }
-
-        // 非失败场景下，无需进行重试，直接向上层回调进度
-        if (info.status != DownloadStatus::FAIL) {
-            UpdateDownloadInfo(info);
-            isNeedCallback = true;
-        } else {
-            // 失败场景下，根据失败情况进行重试下载
-            const auto downloadInfo = GetDownloadInfo(info.downloadId);
-            if (downloadInfo == nullptr) {
-                ENGINE_LOGE("UpdateDownloadProgress abort, download info not found, downloadId %{public}s",
-                    info.downloadId.c_str());
-                return;
-            }
-
-            // 写入磁盘失败或者sha256校验失败，不重试下载
-            if (info.endReason == DownloadEndReason::IO_EXCEPTION || info.endReason == DownloadEndReason::VERIFY_FAIL) {
-                ENGINE_LOGE("UpdateDownloadProgress, delete download file, downloadId %{public}s,"
-                    "fail reason %{public}d", downloadInfo->downloadId.c_str(), CAST_INT(info.endReason));
-                ClearPackage(downloadInfo->path);
-                UpdateDownloadInfo(info);
-                isNeedCallback = true;
-            } else if (!downloadInfo->IsRetryAble()) {
-                // 不能再重试下载时，刷新并上报最终状态
-                ENGINE_LOGI("UpdateDownloadProgress, endReason: %{public}d , retryTimes: %{public}d",
-                    CAST_INT(info.endReason), downloadInfo->retryTimes);
-                UpdateDownloadInfo(info);
-                isNeedCallback = true;
-            } else if (HandleRetry(info.downloadId, info.endReason) != DownloadResult::SUCCESS) {
-                // 重试下载失败时，刷新并上报最终状态
-                ENGINE_LOGE("UpdateDownloadProgress, retry fail, endReason: %{public}d , retryTimes: %{public}d",
-                    CAST_INT(info.endReason), downloadInfo->retryTimes);
-                UpdateDownloadInfo(info);
-                isNeedCallback = true;
-            } else {
-                ENGINE_LOGI("UpdateDownloadProgress, retry success, endReason: %{public}d , retryTimes: %{public}d",
-                    CAST_INT(info.endReason), downloadInfo->retryTimes);
-            }
-        }
+    if (info.status != DownloadStatus::DOWNLOADING && info.status != DownloadStatus::VERIFYING) {
+        RemoveThread(info.downloadId);
     }
-    if (isNeedCallback) {
+
+    // 非失败场景下，无需进行重试，直接向上层回调进度
+    if (info.status != DownloadStatus::FAIL) {
+        UpdateDownloadInfo(info);
         CallbackDownloadProgress(info);
+        return;
     }
+
+    // 失败场景下，根据失败情况进行重试下载
+    const auto downloadInfo = GetDownloadInfo(info.downloadId);
+    if (downloadInfo == nullptr) {
+        ENGINE_LOGE("UpdateDownloadProgress abort, download info not found, downloadId %{public}s",
+            info.downloadId.c_str());
+        return;
+    }
+
+    // 写入磁盘失败或者sha256校验失败，不重试下载
+    if (info.endReason == DownloadEndReason::IO_EXCEPTION || info.endReason == DownloadEndReason::VERIFY_FAIL) {
+        ENGINE_LOGE("UpdateDownloadProgress, delete download file, downloadId %{public}s, fail reason %{public}d",
+            downloadInfo->downloadId.c_str(), CAST_INT(info.endReason));
+        ClearPackage(downloadInfo->path);
+        UpdateDownloadInfo(info);
+        CallbackDownloadProgress(info);
+        return;
+    }
+
+    // 不能再重试下载时，刷新并上报最终状态
+    if (!downloadInfo->IsRetryAble()) {
+        ENGINE_LOGI("UpdateDownloadProgress, endReason: %{public}d , retryTimes: %{public}d", CAST_INT(info.endReason),
+            downloadInfo->retryTimes);
+        UpdateDownloadInfo(info);
+        CallbackDownloadProgress(info);
+        return;
+    }
+
+    // 重试下载失败时，刷新并上报最终状态
+    if (HandleRetry(info.downloadId, info.endReason) != DownloadResult::SUCCESS) {
+        ENGINE_LOGE("UpdateDownloadProgress, retry fail, endReason: %{public}d , retryTimes: %{public}d",
+            CAST_INT(info.endReason), downloadInfo->retryTimes);
+        UpdateDownloadInfo(info);
+        CallbackDownloadProgress(info);
+        return;
+    }
+
+    ENGINE_LOGI("UpdateDownloadProgress, retry success, endReason: %{public}d , retryTimes: %{public}d",
+        CAST_INT(info.endReason), downloadInfo->retryTimes);
 }
 
 std::shared_ptr<DownloadInfo> DownloadService::UpdateDownloadInfo(const DownloadCallbackInfo &info)

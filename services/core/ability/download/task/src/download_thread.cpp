@@ -123,15 +123,6 @@ DownloadResult DownloadThread::Stop()
     return DownloadResult::SUCCESS;
 }
 
-void DownloadThread::SetRequestFinished(bool finished)
-{
-    {
-        std::lock_guard<std::mutex> lock(requestConditionMutex_);
-        isRequestFinished_.store(finished);
-    }
-    requestCondition_.notify_all();
-}
-
 DownloadResult DownloadThread::NetChangeToPause()
 {
     ENGINE_LOGI("DownloadThread NetChangeToPause");
@@ -179,7 +170,7 @@ void DownloadThread::DownloadVersion()
 void DownloadThread::DoDownload()
 {
     downloadStartTime_ = TimeUtils::GetTimestampByMilliseconds();
-    SetRequestFinished(false);
+    isRequestFinished_.store(false);
     auto weakThis = weak_from_this();
     DownloadRequestCallback callback{ [weakThis, this](int64_t dlTotal, int64_t dlNow) {
         const auto sharedPtr = weakThis.lock();
@@ -209,7 +200,7 @@ void DownloadThread::DoDownload()
         return;
     }
     HandleDownloadFinish(response.result, response.status);
-    SetRequestFinished(true);
+    isRequestFinished_.store(true);
 }
 
 void DownloadThread::CallbackDownload(DownloadStatus status, DownloadEndReason endReason,

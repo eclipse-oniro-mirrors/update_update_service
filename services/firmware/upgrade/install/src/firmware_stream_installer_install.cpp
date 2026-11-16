@@ -54,8 +54,11 @@ bool StreamInstallerInstall::PerformInstall(const std::vector<FirmwareComponent>
             successCount++;
         }
     }
-    if (sysInstallProgress_.status != UpgradeStatus::INSTALL_FAIL) {
-        status = downloadProgress_.status;
+    {
+        std::lock_guard<std::mutex> lock(installMutex_);
+        if (sysInstallProgress_.status != UpgradeStatus::INSTALL_FAIL) {
+            status = downloadProgress_.status;
+        }
     }
     
     return successCount == static_cast<uint32_t>(componentList.size());
