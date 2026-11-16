@@ -167,22 +167,6 @@ int32_t UpdateService::Cancel(const UpgradeInfo &info, int32_t service, Business
     return INT_CALL_SUCCESS;
 }
 
-int32_t UpdateService::ApplyNewVersion(const UpgradeInfo &info, const std::string &miscFile,
-    const std::vector<std::string> &packageNames, BusinessError &businessError, int32_t &funcResult)
-{
-    ENGINE_LOGI("ApplyNewVersion not support");
-    businessError.Build(CallResult::UN_SUPPORT, "ApplyNewVersion unsupport");
-    return INT_CALL_SUCCESS;
-}
-
-int32_t UpdateService::VerifyUpgradePackage(const std::string &packagePath, const std::string &keyPath,
-    BusinessError &businessError, int32_t &funcResult)
-{
-    ENGINE_LOGI("VerifyUpgradePackage not support");
-    businessError.Build(CallResult::UN_SUPPORT, "VerifyUpgradePackage unsupport");
-    return INT_CALL_SUCCESS;
-}
-
 void UpdateService::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
     ENGINE_LOGI("UpdaterService oh OnStart, startReason name %{public}s, id %{public}d, value %{public}s",

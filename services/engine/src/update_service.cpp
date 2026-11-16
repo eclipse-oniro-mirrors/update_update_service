@@ -266,28 +266,6 @@ int32_t UpdateService::Cancel(const UpgradeInfo &info, int32_t service, Business
     return onlineUpdater->Cancel(info, service, businessError);
 }
 
-int32_t UpdateService::ApplyNewVersion(const UpgradeInfo &info, const std::string &miscFile,
-    const std::vector<std::string> &packageNames, BusinessError &businessError, int32_t &funcResult)
-{
-    sptr<UpdateServiceLocalUpdater> localUpdater = sptr<UpdateServiceLocalUpdater>::MakeSptr();
-    if (localUpdater == nullptr) {
-        ENGINE_LOGI("ApplyNewVersion localUpdater null");
-        return INT_CALL_FAIL;
-    }
-    return localUpdater->ApplyNewVersion(info, miscFile, packageNames, businessError);
-}
-
-int32_t UpdateService::VerifyUpgradePackage(const std::string &packagePath, const std::string &keyPath,
-    BusinessError &businessError, int32_t &funcResult)
-{
-    sptr<UpdateServiceLocalUpdater> localUpdater = sptr<UpdateServiceLocalUpdater>::MakeSptr();
-    if (localUpdater == nullptr) {
-        ENGINE_LOGI("VerifyUpgradePackage localUpdater null");
-        return INT_CALL_FAIL;
-    }
-    return localUpdater->VerifyUpgradePackage(packagePath, keyPath, businessError);
-}
-
 void UpdateService::InitBusinessAfterUnlock()
 {
     ENGINE_LOGI("Initialize NetManager after user unlock");

@@ -43,6 +43,7 @@ sa_sources = [
   "$updateengine_root_path/services/core/ability/adapter/src/config_parse.cpp",
   "$updateengine_root_path/services/engine/src/update_service_common.cpp",
   "$updateengine_root_path/services/engine/src/update_service_cache.cpp",
+  "$updateengine_root_path/services/engine/src/update_service_local_updater.cpp",
   "$updateengine_root_path/services/engine/src/update_service_restorer.cpp",
 ]
 
@@ -67,7 +68,6 @@ if (update_service_feature_enable) {
     "$updateengine_root_path/services/engine/src/update_service.cpp",
     "$updateengine_root_path/services/engine/src/update_service_impl_firmware.cpp",
     "$updateengine_root_path/services/engine/src/update_service_impl_manager.cpp",
-    "$updateengine_root_path/services/engine/src/update_service_local_updater.cpp",
     "$updateengine_root_path/services/engine/src/update_service_util_hmos.cpp",
   ]
 
@@ -172,6 +172,7 @@ sa_external_deps = [
   "samgr:samgr_proxy",
   "storage_service:storage_manager_sa_proxy",
   "updater:libfsmanager",  # "fs_manager/mount.h"
+  "updater:libpackage_shared",  # "package/package.h"
   "updater:libupdater_shared",  # "updaterkits/updaterkits.h"
 ]
 
@@ -225,7 +226,6 @@ if (update_service_feature_enable) {
     "libxml2:libxml2",
     "openssl:libcrypto_shared",
     "openssl:libssl_shared",
-    "updater:libpackage_shared",  # "package/package.h"
   ]
   sa_external_deps += firmware_external_deps
   sa_external_deps += bell_utils_external_deps
