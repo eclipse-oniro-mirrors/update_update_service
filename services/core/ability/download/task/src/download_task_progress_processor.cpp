@@ -60,7 +60,7 @@ ProgressInfo DownloadTaskProgressProcessor::GetTaskProgress()
         if (downloadInfo == nullptr) {
             continue;
         }
-        progressInfo.progresses.emplace_back(downloadInfo);
+        progressInfo.progresses.emplace_back(*downloadInfo);
     }
     ENGINE_LOGI("GetTaskProgress, taskId %{public}s, progress info %{public}s", taskId_.c_str(),
         progressInfo.ToString().c_str());
