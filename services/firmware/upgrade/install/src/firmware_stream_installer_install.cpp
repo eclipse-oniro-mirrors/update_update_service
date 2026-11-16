@@ -19,14 +19,10 @@
 #include <iostream>
 #include <unistd.h>
 
-#include "isys_installer.h"
-#include "sys_installer_kits_impl.h"
-
 #include "config_parse.h"
 #include "dupdate_errno.h"
 #include "firmware_constant.h"
 #include "firmware_log.h"
-#include "firmware_sys_installer_callback.h"
 #include "firmware_update_helper.h"
 
 namespace OHOS {
@@ -54,10 +50,14 @@ bool StreamInstallerInstall::PerformInstall(const std::vector<FirmwareComponent>
             successCount++;
         }
     }
-    if (sysInstallProgress_.status != UpgradeStatus::INSTALL_FAIL) {
-        status = downloadProgress_.status;
+
+    {
+        std::unique_lock<std::mutex> lock(installMutex_);
+        if (sysInstallProgress_.status != UpgradeStatus::INSTALL_FAIL) {
+            status = downloadProgress_.status;
+        }
     }
-    
+
     return successCount == static_cast<uint32_t>(componentList.size());
 }
 
@@ -73,6 +73,7 @@ bool StreamInstallerInstall::InstallComponentWithRetry(const FirmwareComponent &
         if (DoSysInstall(refreshComponent) == OHOS_SUCCESS) {
             return true;
         } else {
+            std::lock_guard<std::mutex> lock(installMutex_);
             if (downloadProgress_.status == UpgradeStatus::DOWNLOAD_CANCEL) {
                 return false;
             }
@@ -90,8 +91,11 @@ int32_t StreamInstallerInstall::DoSysInstall(const FirmwareComponent &component)
     #ifndef UPDATER_UT
     SysInstaller::SysInstallerKitsImpl::GetInstance().StopStreamUpdate();
     #endif
-    downloadProgress_.status = UpgradeStatus::INIT;
-    sysInstallProgress_.status = UpgradeStatus::INIT;
+    {
+        std::lock_guard<std::mutex> lock(installMutex_);
+        downloadProgress_.status = UpgradeStatus::INIT;
+        sysInstallProgress_.status = UpgradeStatus::INIT;
+    }
     FIRMWARE_LOGI("DoSysInstall, status=%{public}d", component.status);
     FirmwareComponent firmwareComponent = component;
 
@@ -134,32 +138,51 @@ int32_t StreamInstallerInstall::InitSysInstaller(const std::string &versionId)
     return OHOS_SUCCESS;
 }
 
-int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &component)
+SysInstallerExecutorCallback StreamInstallerInstall::CreateInstallCallback(FirmwareComponent &component)
 {
-    #ifndef UPDATER_UT
-    SysInstallerExecutorCallback callback{[&](const InstallProgress &installProgress) {
-        component.status = installProgress.progress.status;
-        component.recordPoint += installProgress.dealLen;
-        if (component.size > 0) {
-            component.progress = static_cast<double>(component.recordPoint) / component.size * Firmware::ONE_HUNDRED;
+    auto weakThis = weak_from_this();
+    FirmwareComponent componentThis = component;
+    SysInstallerExecutorCallback callback {[weakThis, componentThis](const InstallProgress &installProgress) mutable {
+        auto self = weakThis.lock();
+        if (self == nullptr) {
+            FIRMWARE_LOGE("StreamInstallerInstall has been destroyed, callback expired");
+            return;
         }
-        if (onInstallCallback_.onFirmwareProgress == nullptr) {
+
+        componentThis.status = installProgress.progress.status;
+        componentThis.recordPoint += installProgress.dealLen;
+        if (componentThis.size > 0) {
+            componentThis.progress =
+                static_cast<double>(componentThis.recordPoint) / componentThis.size * Firmware::ONE_HUNDRED;
+        }
+        if (self->onInstallCallback_.onFirmwareProgress == nullptr) {
             FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
             return;
         }
-        onInstallCallback_.onFirmwareProgress(component);
-        sysInstallProgress_ = installProgress.progress;
-        if (Firmware::ONE_HUNDRED == component.progress) {
-            sysInstallProgress_.status = UpgradeStatus::INSTALL_SUCCESS;
+        self->onInstallCallback_.onFirmwareProgress(componentThis);
+        bool isNeedNotify = false;
+        {
+            std::lock_guard<std::mutex> lock(self->installMutex_);
+            self->sysInstallProgress_ = installProgress.progress;
+            if (Firmware::ONE_HUNDRED == componentThis.progress) {
+                self->sysInstallProgress_.status = UpgradeStatus::INSTALL_SUCCESS;
+            }
+            self->errMsg_ = installProgress.errMsg;
+            isNeedNotify = (componentThis.status == UpgradeStatus::INSTALL_FAIL ||
+                componentThis.status == UpgradeStatus::INSTALL_SUCCESS);
         }
-        errMsg_ = installProgress.errMsg;
-        if (component.status == UpgradeStatus::INSTALL_FAIL ||
-            component.status == UpgradeStatus::INSTALL_SUCCESS) {
-            NotifyCondition();
+        if (isNeedNotify) {
+            self->NotifyCondition();
         }
     }};
-    
-    sptr<SysInstaller::ISysInstallerCallbackFunc> cb = new SysInstallerCallback(callback);
+    return callback;
+}
+
+int32_t StreamInstallerInstall::RegisterInstallerCallback(FirmwareComponent &component,
+    sptr<SysInstaller::ISysInstallerCallbackFunc> &cb)
+{
+    SysInstallerExecutorCallback callback = CreateInstallCallback(component);
+    cb = new SysInstallerCallback(callback);
     if (cb == nullptr) {
         FIRMWARE_LOGE("sys installer callback is nullptr");
         errMsg_.errorMessage = "sys installer callback is nullptr";
@@ -174,6 +197,13 @@ int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &componen
         errMsg_.errorCode = ret;
     }
     return ret;
+}
+
+int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &component)
+{
+    #ifndef UPDATER_UT
+    sptr<SysInstaller::ISysInstallerCallbackFunc> cb = nullptr;
+    return RegisterInstallerCallback(component, cb);
     #else
     return OHOS_SUCCESS;
     #endif
@@ -190,12 +220,17 @@ int32_t StreamInstallerInstall::StartInstallProcess(FirmwareComponent &component
         return OHOS_FAILURE;
     }
     downloadThread_ = std::make_shared<StreamProgressThread>([&](const Progress &progress) -> void {
-        downloadProgress_ = progress;
-        if (downloadProgress_.status == UpgradeStatus::DOWNLOAD_FAIL) {
+        UpgradeStatus downloadStatus = UpgradeStatus::INIT;
+        {
+            std::lock_guard<std::mutex> lock(installMutex_);
+            downloadProgress_ = progress;
+            downloadStatus = downloadProgress_.status;
+        }
+        if (downloadStatus == UpgradeStatus::DOWNLOAD_FAIL) {
             errMsg_.errorMessage = "download fail";
             errMsg_.errorCode = -1;
             NotifyCondition();
-        } else if (downloadProgress_.status == UpgradeStatus::DOWNLOAD_CANCEL) {
+        } else if (downloadStatus == UpgradeStatus::DOWNLOAD_CANCEL) {
             NotifyCondition();
         } else {
         }
@@ -243,6 +278,7 @@ int32_t StreamInstallerInstall::WaitInstallResult()
             ret = OHOS_FAILURE;
         }
     }
+    lock.unlock();
     // 停止下载线程
     downloadThread_->StopDownload();
     // 停止数据处理线程

@@ -16,7 +16,6 @@
 #ifndef UPDATE_SERVICE_IMPL_FIRMWARE_H
 #define UPDATE_SERVICE_IMPL_FIRMWARE_H
 
-#include <atomic>
 #include <condition_variable>
 
 #include "iservice_online_updater.h"
@@ -80,7 +79,6 @@ private:
         DelayedSingleton<FirmwarePreferencesUtil>::GetInstance();
     std::condition_variable conditionVariable_;
     std::mutex checkNewVersionMutex_;
-    std::atomic<bool> checkComplete_ = false;
     void GetChangelogContent(std::string &dataXml, const std::string &language);
     bool IsValidComponentId(const std::string &componentId);
     bool IsCoverBasePath(const std::string &fullPath);
