@@ -46,7 +46,7 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
     std::shared_ptr<CheckResult> checkResultSptr = std::make_shared<CheckResult>();
     std::shared_ptr<std::atomic<bool>> checkCompleteSptr = std::make_shared<std::atomic<bool>>(false);
     FirmwareManager::GetInstance()->DoCheck(
-        [businessErrorSptr, checkResultSptr, weakPtr](BusinessError &error, CheckResult &result) {
+        [businessErrorSptr, checkResultSptr, checkCompleteSptr, weakPtr](BusinessError &error, CheckResult &result) {
             sptr<UpdateServiceImplFirmware> firmwareSptr = weakPtr.promote();
             if (firmwareSptr == nullptr) {
                 FIRMWARE_LOGE("UpdateServiceImplFirmware has been destructed, CheckNewVersion is TimeOut");
