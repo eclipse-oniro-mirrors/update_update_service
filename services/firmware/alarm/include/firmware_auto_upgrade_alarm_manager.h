@@ -16,6 +16,7 @@
 #ifndef FIRMWARE_AUTO_UPGRADE_ALARM_MANAGER_H
 #define FIRMWARE_AUTO_UPGRADE_ALARM_MANAGER_H
 
+#include <atomic>
 #include "singleton.h"
 
 #include "constant.h"
@@ -50,8 +51,7 @@ private:
     bool IsNeedIgnoreDuration(int32_t setDuration, int32_t currentDuration, int32_t minDuration, int32_t maxDuration);
 
 private:
-    uint64_t autoTimerId_ = 0;
-    std::recursive_mutex autoUpgradeAlarmMutex_;
+    std::atomic<uint64_t> autoTimerId_ = 0;
     std::shared_ptr<FirmwarePreferencesUtil> preferencesUtil_ = FirmwarePreferencesUtil::GetInstance();
 };
 } // namespace OHOS::UpdateService

@@ -93,19 +93,19 @@ void FirmwareAutoUpgradeAlarmManager::RegisterAutoUpgradeTime(AutoUpgradeTimeRef
     FIRMWARE_LOGI("Firmware RegisterAutoUpgradeTime begin,refreshType: %{public}d,isNeedRetry: %{public}s,"
         "timerId: %{public}s,autoUpgradeTime: %{public}s",
         static_cast<int32_t>(refreshType), StringUtils::GetBoolStr(isNeedRetry).c_str(),
-        std::to_string(autoTimerId_).c_str(), TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str());
+        std::to_string(autoTimerId_.load()).c_str(), TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str());
     int64_t autoUpgradeTimeCalculateResult = autoUpgradeTime;
     CalculateAutoUpgradeTime(refreshType, autoUpgradeTimeCalculateResult, duration);
-    std::lock_guard<std::recursive_mutex> lock(autoUpgradeAlarmMutex_);
-    if (autoUpgradeTime == autoUpgradeTimeCalculateResult && autoTimerId_ > 0) {
+    if (autoUpgradeTime == autoUpgradeTimeCalculateResult && autoTimerId_.load() > 0) {
         FIRMWARE_LOGI("current AutoUpgradeTime %{public}s is active",
             TimeUtils::GetPrintTimeStr(autoUpgradeTime).c_str());
         return;
     }
     preferencesUtil_->SaveAutoUpgradeTime(autoUpgradeTimeCalculateResult);
-    UnregisterAlarmTimer(autoTimerId_);
-    autoTimerId_ =
+    UnregisterAlarmTimer(autoTimerId_.load());
+    auto newTimerId =
         AlarmTimerUtils::RegisterAlarm(autoUpgradeTimeCalculateResult, [this]() { CheckAndHandleAutoUpgradeAlarm(); });
+    autoTimerId_.store(newTimerId);
     FIRMWARE_LOGI("Firmware RegisterAutoUpgradeTime,alarmTime_: %{public}s",
         TimeUtils::GetPrintTimeStr(autoUpgradeTimeCalculateResult).c_str());
 }
@@ -164,7 +164,6 @@ void FirmwareAutoUpgradeAlarmManager::HandleNetChange(int64_t currentTime, int64
 void FirmwareAutoUpgradeAlarmManager::CancelAutoUpgradeAlarm()
 {
     ENGINE_LOGI("CancelAutoUpgradeAlarm");
-    std::lock_guard<std::recursive_mutex> lock(autoUpgradeAlarmMutex_);
     UnregisterAlarmTimer(autoTimerId_);
 }
 
