@@ -44,7 +44,7 @@ private:
     int32_t InitSysInstaller(const std::string &versionId);
     int32_t SetInstallerCallback(FirmwareComponent &component);
     void NotifyCondition();
-    void SetErrorMessage(const int32_t errorCode, std::string errorMessage);
+    void SetErrorMessage(const int32_t errorCode, const std::string errorMessage);
 
 private:
     Progress downloadProgress_;
