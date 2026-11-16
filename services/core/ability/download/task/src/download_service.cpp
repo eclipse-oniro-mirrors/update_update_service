@@ -512,7 +512,7 @@ void DownloadService::SetDisableCallbackFlag(bool flag)
     std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
     for (const auto &[downloadId, downloadThread] : threadMap_) {
         if (downloadThread == nullptr) {
-            ENGINE_LOGI("DownloadService::NotifyCallbackDisabled downloadId = %{public}s, flag = %{public}d",
+            ENGINE_LOGE("DownloadService::NotifyCallbackDisabled downloadId = %{public}s, flag = %{public}d",
                 downloadId.c_str(), flag);
             continue;
         }

@@ -19,10 +19,14 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "isys_installer.h"
+#include "sys_installer_kits_impl.h"
+
 #include "config_parse.h"
 #include "dupdate_errno.h"
 #include "firmware_constant.h"
 #include "firmware_log.h"
+#include "firmware_sys_installer_callback.h"
 #include "firmware_update_helper.h"
 
 namespace OHOS {
@@ -138,72 +142,59 @@ int32_t StreamInstallerInstall::InitSysInstaller(const std::string &versionId)
     return OHOS_SUCCESS;
 }
 
-SysInstallerExecutorCallback StreamInstallerInstall::CreateInstallCallback(FirmwareComponent &component)
+void StreamInstallerInstall::SetErrorMessage(const int32_t errorCode, std::string errorMessage)
 {
+    errMsg_.errorCode = errorCode;
+    errMsg_.errorMessage = errorMessage;
+}
+
+int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &component)
+{
+    #ifndef UPDATER_UT
     auto weakThis = weak_from_this();
-    FirmwareComponent componentThis = component;
-    SysInstallerExecutorCallback callback {[weakThis, componentThis](const InstallProgress &installProgress) mutable {
+    SysInstallerExecutorCallback callback {[weakThis, &component](const InstallProgress &installProgress) mutable {
         auto self = weakThis.lock();
         if (self == nullptr) {
             FIRMWARE_LOGE("StreamInstallerInstall has been destroyed, callback expired");
             return;
         }
-
-        componentThis.status = installProgress.progress.status;
-        componentThis.recordPoint += installProgress.dealLen;
-        if (componentThis.size > 0) {
-            componentThis.progress =
-                static_cast<double>(componentThis.recordPoint) / componentThis.size * Firmware::ONE_HUNDRED;
+        component.status = installProgress.progress.status;
+        component.recordPoint += installProgress.dealLen;
+        if (component.size > 0) {
+            component.progress = static_cast<double>(component.recordPoint) / component.size * Firmware::ONE_HUNDRED;
         }
         if (self->onInstallCallback_.onFirmwareProgress == nullptr) {
             FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
             return;
         }
-        self->onInstallCallback_.onFirmwareProgress(componentThis);
-        bool isNeedNotify = false;
+        self->onInstallCallback_.onFirmwareProgress(component);
         {
             std::lock_guard<std::mutex> lock(self->installMutex_);
             self->sysInstallProgress_ = installProgress.progress;
-            if (Firmware::ONE_HUNDRED == componentThis.progress) {
+            if (Firmware::ONE_HUNDRED == component.progress) {
                 self->sysInstallProgress_.status = UpgradeStatus::INSTALL_SUCCESS;
             }
-            self->errMsg_ = installProgress.errMsg;
-            isNeedNotify = (componentThis.status == UpgradeStatus::INSTALL_FAIL ||
-                componentThis.status == UpgradeStatus::INSTALL_SUCCESS);
         }
-        if (isNeedNotify) {
-            self->NotifyCondition();
+        self->errMsg_ = installProgress.errMsg;
+        if (component.status == UpgradeStatus::INSTALL_FAIL ||
+            component.status == UpgradeStatus::INSTALL_SUCCESS) {
+            NotifyCondition();
         }
     }};
-    return callback;
-}
-
-int32_t StreamInstallerInstall::RegisterInstallerCallback(FirmwareComponent &component,
-    sptr<SysInstaller::ISysInstallerCallbackFunc> &cb)
-{
-    SysInstallerExecutorCallback callback = CreateInstallCallback(component);
-    cb = new SysInstallerCallback(callback);
+    
+    sptr<SysInstaller::ISysInstallerCallbackFunc> cb = new SysInstallerCallback(callback);
     if (cb == nullptr) {
         FIRMWARE_LOGE("sys installer callback is nullptr");
-        errMsg_.errorMessage = "sys installer callback is nullptr";
-        errMsg_.errorCode = DUPDATE_ERR_IPC_ERROR;
+        SetErrorMessage(DUPDATE_ERR_IPC_ERROR, "sys installer callback is nullptr");
         return OHOS_FAILURE;
     }
 
     int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SetUpdateCallback(component.versionId, cb);
     if (ret != OHOS_SUCCESS) {
         FIRMWARE_LOGE("set sys installer callback failed");
-        errMsg_.errorMessage = "set sys installer callback failed";
-        errMsg_.errorCode = ret;
+        SetErrorMessage(ret, "set sys installer callback failed");
     }
     return ret;
-}
-
-int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &component)
-{
-    #ifndef UPDATER_UT
-    sptr<SysInstaller::ISysInstallerCallbackFunc> cb = nullptr;
-    return RegisterInstallerCallback(component, cb);
     #else
     return OHOS_SUCCESS;
     #endif
@@ -278,7 +269,6 @@ int32_t StreamInstallerInstall::WaitInstallResult()
             ret = OHOS_FAILURE;
         }
     }
-    lock.unlock();
     // 停止下载线程
     downloadThread_->StopDownload();
     // 停止数据处理线程

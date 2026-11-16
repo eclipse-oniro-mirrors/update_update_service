@@ -64,7 +64,6 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
     constexpr int32_t waitTime = 40;
     bool completed = conditionVariable_.wait_for(lock, std::chrono::seconds(waitTime),
         [checkCompleteSptr] { return checkCompleteSptr->load(); });
-    lock.unlock();
     if (!completed) {
         FIRMWARE_LOGE("CheckNewVersion is time out");
         businessError.errorNum = CallResult::TIME_OUT;

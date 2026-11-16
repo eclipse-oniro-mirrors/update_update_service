@@ -24,9 +24,7 @@
 
 #include "firmware_component.h"
 #include "firmware_install.h"
-#include "firmware_sys_installer_callback.h"
 #include "progress_thread.h"
-#include "sys_installer_kits_impl.h"
 
 namespace OHOS {
 namespace UpdateService {
@@ -46,9 +44,7 @@ private:
     int32_t InitSysInstaller(const std::string &versionId);
     int32_t SetInstallerCallback(FirmwareComponent &component);
     void NotifyCondition();
-    SysInstallerExecutorCallback CreateInstallCallback(FirmwareComponent &component);
-    int32_t RegisterInstallerCallback(FirmwareComponent &component,
-        sptr<SysInstaller::ISysInstallerCallbackFunc> &cb);
+    void SetErrorMessage(const int32_t errorCode, std::string errorMessage);
 
 private:
     Progress downloadProgress_;
