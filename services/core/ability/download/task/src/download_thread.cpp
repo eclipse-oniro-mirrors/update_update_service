@@ -123,6 +123,16 @@ DownloadResult DownloadThread::Stop()
     return DownloadResult::SUCCESS;
 }
 
+void DownloadThread::SetRequestFinished(bool finished)
+{
+    // 置位与通知需成对，否则stop()只能等超时
+    {
+       std::unique_lock<std::mutex> uniqueLock(requestConditionMutex_);
+       isRequestFinished_.store(finished);
+    }
+    requestCondition_.notify_all();
+}
+
 DownloadResult DownloadThread::NetChangeToPause()
 {
     ENGINE_LOGI("DownloadThread NetChangeToPause");
@@ -170,7 +180,7 @@ void DownloadThread::DownloadVersion()
 void DownloadThread::DoDownload()
 {
     downloadStartTime_ = TimeUtils::GetTimestampByMilliseconds();
-    isRequestFinished_.store(false);
+    SetRequestFinished(false);
     auto weakThis = weak_from_this();
     DownloadRequestCallback callback{ [weakThis, this](int64_t dlTotal, int64_t dlNow) {
         const auto sharedPtr = weakThis.lock();
@@ -200,7 +210,7 @@ void DownloadThread::DoDownload()
         return;
     }
     HandleDownloadFinish(response.result, response.status);
-    isRequestFinished_.store(true);
+    SetRequestFinished(true);
 }
 
 void DownloadThread::CallbackDownload(DownloadStatus status, DownloadEndReason endReason,
@@ -498,9 +508,7 @@ bool DownloadThread::NotifyCancel()
 {
     // 如果取消/暂停下载，直接在对应的方法通过通知后同步回调
     if (isNeedCancel_.load()) {
-        isRequestFinished_.store(true);
-        std::unique_lock<std::mutex> uniqueLock(requestConditionMutex_);
-        requestCondition_.notify_all();
+        SetRequestFinished(true);
         ENGINE_LOGI("NotifyCancel end");
         return true;
     }

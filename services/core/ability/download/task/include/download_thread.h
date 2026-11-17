@@ -84,6 +84,7 @@ private:
     void HandleNetworkCheck(int curlRet, long responseCode);
     bool NotifyCancel();
     void StopRequestAndSha256Calculate();
+    void SetRequestFinished(bool finished);
 
     void DoVerify();
     bool CheckBeforeStartDownload();
