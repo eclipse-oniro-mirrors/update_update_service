@@ -47,7 +47,7 @@ private:
     void CalculateAutoUpgradeTime(AutoUpgradeTimeRefreshType refreshType, int64_t &autoUpgradeTime, int64_t duration);
     void HandleNetChange(int64_t currentTime, int64_t &autoUpgradeTime, int64_t duration);
     void CancelAutoUpgradeAlarm();
-    void UnregisterAlarmTimer(uint64_t &timerId);
+    void UnregisterAlarmTimer();
     bool IsNeedIgnoreDuration(int32_t setDuration, int32_t currentDuration, int32_t minDuration, int32_t maxDuration);
 
 private:

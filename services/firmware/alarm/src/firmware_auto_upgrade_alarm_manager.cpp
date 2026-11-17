@@ -102,7 +102,7 @@ void FirmwareAutoUpgradeAlarmManager::RegisterAutoUpgradeTime(AutoUpgradeTimeRef
         return;
     }
     preferencesUtil_->SaveAutoUpgradeTime(autoUpgradeTimeCalculateResult);
-    UnregisterAlarmTimer(autoTimerId_.load());
+    UnregisterAlarmTimer();
     auto newTimerId =
         AlarmTimerUtils::RegisterAlarm(autoUpgradeTimeCalculateResult, [this]() { CheckAndHandleAutoUpgradeAlarm(); });
     autoTimerId_.store(newTimerId);
@@ -164,14 +164,14 @@ void FirmwareAutoUpgradeAlarmManager::HandleNetChange(int64_t currentTime, int64
 void FirmwareAutoUpgradeAlarmManager::CancelAutoUpgradeAlarm()
 {
     ENGINE_LOGI("CancelAutoUpgradeAlarm");
-    UnregisterAlarmTimer(autoTimerId_);
+    UnregisterAlarmTimer();
 }
 
-void FirmwareAutoUpgradeAlarmManager::UnregisterAlarmTimer(uint64_t &timerId)
+void FirmwareAutoUpgradeAlarmManager::UnregisterAlarmTimer()
 {
-    if (timerId > 0) {
-        AlarmTimerUtils::UnregisterAlarm(timerId);
+    if (autoTimerId_ > 0) {
+        AlarmTimerUtils::UnregisterAlarm(autoTimerId_);
     }
-    timerId = 0;
+    autoTimerId_.store(0);
 }
 } // namespace OHOS::UpdateService
