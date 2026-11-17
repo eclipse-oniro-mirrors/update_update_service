@@ -151,34 +151,33 @@ int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &componen
 {
     #ifndef UPDATER_UT
     auto weakThis = weak_from_this();
-    FirmwareComponent componentCb = component;
-    SysInstallerExecutorCallback callback {[weakThis, componentCb](const InstallProgress &installProgress) mutable {
+    SysInstallerExecutorCallback callback {[weakThis, component](const InstallProgress &installProgress) mutable {
         auto self = weakThis.lock();
         if (self == nullptr) {
             FIRMWARE_LOGE("StreamInstallerInstall has been destroyed, callback expired");
             return;
         }
-        componentCb.status = installProgress.progress.status;
-        componentCb.recordPoint += installProgress.dealLen;
-        if (componentCb.size > 0) {
-            componentCb.progress =
-                static_cast<double>(componentCb.recordPoint) / componentCb.size * Firmware::ONE_HUNDRED;
+        component.status = installProgress.progress.status;
+        component.recordPoint += installProgress.dealLen;
+        if (component.size > 0) {
+            component.progress =
+                static_cast<double>(component.recordPoint) / component.size * Firmware::ONE_HUNDRED;
         }
         if (self->onInstallCallback_.onFirmwareProgress == nullptr) {
             FIRMWARE_LOGE("SysInstallerExecutorCallback onFirmwareProgress is null");
             return;
         }
-        self->onInstallCallback_.onFirmwareProgress(componentCb);
+        self->onInstallCallback_.onFirmwareProgress(component);
         {
             std::lock_guard<std::mutex> lock(self->installMutex_);
             self->sysInstallProgress_ = installProgress.progress;
-            if (Firmware::ONE_HUNDRED == componentCb.progress) {
+            if (Firmware::ONE_HUNDRED == component.progress) {
                 self->sysInstallProgress_.status = UpgradeStatus::INSTALL_SUCCESS;
             }
             self->errMsg_ = installProgress.errMsg;
         }
-        if (componentCb.status == UpgradeStatus::INSTALL_FAIL ||
-            componentCb.status == UpgradeStatus::INSTALL_SUCCESS) {
+        if (component.status == UpgradeStatus::INSTALL_FAIL ||
+            component.status == UpgradeStatus::INSTALL_SUCCESS) {
             self->NotifyCondition();
         }
     }};
@@ -189,7 +188,7 @@ int32_t StreamInstallerInstall::SetInstallerCallback(FirmwareComponent &componen
         return OHOS_FAILURE;
     }
 
-    int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SetUpdateCallback(componentCb.versionId, cb);
+    int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SetUpdateCallback(component.versionId, cb);
     if (ret != OHOS_SUCCESS) {
         FIRMWARE_LOGE("set sys installer callback failed");
         SetErrorMessage(ret, "set sys installer callback failed");
@@ -266,7 +265,6 @@ int32_t StreamInstallerInstall::WaitInstallResult()
             ret = OHOS_FAILURE;
         }
     }
-    lock.unlock();
     // 停止下载线程
     downloadThread_->StopDownload();
     // 停止数据处理线程
