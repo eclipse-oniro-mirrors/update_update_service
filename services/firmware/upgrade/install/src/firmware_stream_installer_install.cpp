@@ -127,15 +127,13 @@ int32_t StreamInstallerInstall::InitSysInstaller(const std::string &versionId)
     int32_t ret = SysInstaller::SysInstallerKitsImpl::GetInstance().SysInstallerInit(versionId, true);
     if (ret != OHOS_SUCCESS) {
         FIRMWARE_LOGE("sys installer init failed");
-        errMsg_.errorMessage = "sys installer init failed";
-        errMsg_.errorCode = DUPDATE_ERR_IPC_ERROR;
+        SetErrorMessage(DUPDATE_ERR_IPC_ERROR, "sys installer init failed");
         return OHOS_FAILURE;
     }
     int32_t updateStatus = SysInstaller::SysInstallerKitsImpl::GetInstance().GetUpdateStatus(versionId);
     if (updateStatus != CAST_INT(SysInstaller::UpdateStatus::UPDATE_STATE_INIT)) {
         FIRMWARE_LOGE("StartUnpack status: %{public}d , system busy", updateStatus);
-        errMsg_.errorMessage = "sys installer is busy";
-        errMsg_.errorCode = ret;
+        SetErrorMessage(ret, "sys installer is busy");
         return OHOS_FAILURE;
     }
     #endif
@@ -207,8 +205,7 @@ int32_t StreamInstallerInstall::StartInstallProcess(FirmwareComponent &component
     #ifndef UPDATER_UT
     auto ret = SysInstaller::SysInstallerKitsImpl::GetInstance().StartStreamUpdate();
     if (ret != OHOS_SUCCESS) {
-        errMsg_.errorMessage = "sys installer StartStreamUpdate failed";
-        errMsg_.errorCode = ret;
+        SetErrorMessage(ret, "sys installer StartStreamUpdate failed");
         FIRMWARE_LOGE("sys installer StartStreamUpdate failed ret = %{public}d", ret);
         return OHOS_FAILURE;
     }
@@ -220,8 +217,7 @@ int32_t StreamInstallerInstall::StartInstallProcess(FirmwareComponent &component
             downloadStatus = downloadProgress_.status;
         }
         if (downloadStatus == UpgradeStatus::DOWNLOAD_FAIL) {
-            errMsg_.errorMessage = "download fail";
-            errMsg_.errorCode = -1;
+            SetErrorMessage(-1, "download fail");
             NotifyCondition();
         } else if (downloadStatus == UpgradeStatus::DOWNLOAD_CANCEL) {
             NotifyCondition();
@@ -230,8 +226,7 @@ int32_t StreamInstallerInstall::StartInstallProcess(FirmwareComponent &component
     });
     ret = downloadThread_->StartDownload(component.url, component.size, component.recordPoint);
     if (ret != OHOS_SUCCESS) {
-        errMsg_.errorMessage = "StartDownload failed";
-        errMsg_.errorCode = ret;
+        SetErrorMessage(ret, "StartDownload failed");
         FIRMWARE_LOGE("StartDownload failed ret = %{public}d", ret);
         return OHOS_FAILURE;
     }
@@ -271,6 +266,7 @@ int32_t StreamInstallerInstall::WaitInstallResult()
             ret = OHOS_FAILURE;
         }
     }
+    lock.unlock();
     // 停止下载线程
     downloadThread_->StopDownload();
     // 停止数据处理线程
