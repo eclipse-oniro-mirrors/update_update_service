@@ -18,6 +18,7 @@
 
 #include <string>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <chrono>
 
@@ -31,7 +32,8 @@ namespace UpdateService {
 constexpr int16_t MAX_RETRY_COUNT = 3; // 重试次数
 constexpr int32_t RETRY_INTERVAL_TIME = 100 * 1000; // 重试间隔时间50ms
 
-class StreamInstallerInstall final : public FirmwareInstall {
+class StreamInstallerInstall final : public FirmwareInstall,
+    public std::enable_shared_from_this<StreamInstallerInstall> {
 private:
     bool IsComponentLegal(const std::vector<FirmwareComponent> &componentList) final;
     bool PerformInstall(const std::vector<FirmwareComponent> &componentList, UpgradeStatus &status) final;
@@ -42,6 +44,7 @@ private:
     int32_t InitSysInstaller(const std::string &versionId);
     int32_t SetInstallerCallback(FirmwareComponent &component);
     void NotifyCondition();
+    void SetErrorMessage(const int32_t errorCode, const std::string errorMessage);
 
 private:
     Progress downloadProgress_;

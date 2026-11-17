@@ -51,7 +51,7 @@
     upgradeAction: UpgradeAction;
     displayVersion: String;
     innerVersion: String;
-    size: i32;
+    size: i64;
     effectiveMode: EffectiveMode;
     descriptionInfo: DescriptionInfo;
   }
@@ -105,8 +105,8 @@
   }
 
   struct UpgradePeriod {
-    start: i32;
-    end: i32;
+    start: i64;
+    end: i64;
   }
 
   struct TaskInfo {

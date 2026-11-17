@@ -213,6 +213,10 @@ void DownloadService::NotifyCancelCompleted()
 {
     ENGINE_LOGI("NotifyCancelCompleted, taskId %{public}s", taskId_.c_str());
     for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
+        if (downloadInfo == nullptr) {
+            ENGINE_LOGE("NotifyCancelCompleted fail, downloadId = %{public}s", downloadId.c_str());
+            continue;
+        }
         // 组装取消回调信息
         DownloadCallbackInfo callbackInfo;
         callbackInfo.downloadId = downloadInfo->downloadId;
@@ -507,8 +511,11 @@ void DownloadService::SetDisableCallbackFlag(bool flag)
     // 通知各个线程停止回调下载进度
     std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
     for (const auto &[downloadId, downloadThread] : threadMap_) {
-        ENGINE_LOGI("DownloadService::NotifyCallbackDisabled downloadId = %{public}s, flag = %{public}d",
-            downloadId.c_str(), flag);
+        if (downloadThread == nullptr) {
+            ENGINE_LOGE("DownloadService::NotifyCallbackDisabled downloadId = %{public}s, flag = %{public}d",
+                downloadId.c_str(), flag);
+            continue;
+        }
         downloadThread->SetDisableCallbackFlag(flag);
     }
 }

@@ -116,6 +116,10 @@ void DownloadTask::Resume(NetType netType, DownloadCallback callback, DownloadEr
 {
     // 如果存在下载失败的任务，重置状态以重试下载
     for (auto &[downloadId, downloadInfo] : downloadInfoMap_) {
+        if (downloadInfo == nullptr) {
+            ENGINE_LOGE("Resume failed, download info empty, downloadId %{public}s", downloadId.c_str());
+            continue;
+        }
         if (downloadInfo->status == DownloadStatus::FAIL) {
             downloadInfo->status = DownloadStatus::INIT;
         }

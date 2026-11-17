@@ -15,6 +15,7 @@
 
 #include "update_service_impl_firmware.h"
 
+#include <atomic>
 #include <regex>
 #include <string>
 #include "dupdate_errno.h"
@@ -41,27 +42,36 @@ int32_t UpdateServiceImplFirmware::CheckNewVersion(const UpgradeInfo &info, Busi
     CheckResult &checkResult)
 {
     wptr<UpdateServiceImplFirmware> weakPtr(this);
+    std::shared_ptr<BusinessError> businessErrorSptr = std::make_shared<BusinessError>();
+    std::shared_ptr<CheckResult> checkResultSptr = std::make_shared<CheckResult>();
+    std::shared_ptr<std::atomic<bool>> checkCompleteSptr = std::make_shared<std::atomic<bool>>(false);
     FirmwareManager::GetInstance()->DoCheck(
-        [&, weakPtr](const BusinessError &error, const CheckResult &result) {
+        [businessErrorSptr, checkResultSptr, checkCompleteSptr, weakPtr](BusinessError &error, CheckResult &result) {
             sptr<UpdateServiceImplFirmware> firmwareSptr = weakPtr.promote();
             if (firmwareSptr == nullptr) {
                 FIRMWARE_LOGE("UpdateServiceImplFirmware has been destructed, CheckNewVersion is TimeOut");
                 return;
             }
-            businessError = error;
-            checkResult = result;
-            firmwareSptr->checkComplete_ = true;
+            *businessErrorSptr = error;
+            *checkResultSptr = result;
+            {
+                std::lock_guard<std::mutex> lock(firmwareSptr->checkNewVersionMutex_);
+                checkCompleteSptr->store(true);
+            }
             firmwareSptr->conditionVariable_.notify_all();
         });
     std::unique_lock<std::mutex> lock(checkNewVersionMutex_);
     constexpr int32_t waitTime = 40;
-    if (!conditionVariable_.wait_for(lock, std::chrono::seconds(waitTime),
-        [this] { return checkComplete_.load(); })) {
+    bool completed = conditionVariable_.wait_for(lock, std::chrono::seconds(waitTime),
+        [checkCompleteSptr] { return checkCompleteSptr->load(); });
+    if (!completed) {
         FIRMWARE_LOGE("CheckNewVersion is time out");
         businessError.errorNum = CallResult::TIME_OUT;
         businessError.message = "CheckNewVersion TimeOut";
+        return INT_TIME_OUT;
     }
-    weakPtr->checkComplete_ = false;
+    businessError = *businessErrorSptr;
+    checkResult = *checkResultSptr;
     return INT_CALL_SUCCESS;
 }
 
