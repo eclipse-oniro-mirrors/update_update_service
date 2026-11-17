@@ -18,6 +18,7 @@
 
 #include "singleton.h"
 
+#include <atomic>
 #include <map>
 #include <set>
 
@@ -58,7 +59,7 @@ private:
     std::shared_ptr<NetObserver> observer_ = nullptr;
 #endif
     std::mutex netChangeMutex_;
-    NetType netType_ = NetType::NO_NET;
+    std::atomic<NetType> netType_{NetType::NO_NET};
     std::map<NetChangeCallbackType, NetChangeCallback> netChangeCallbackMap_;
     ffrt::queue onNetChangeQueue_{ "onNetChangeQueue_" };
 };

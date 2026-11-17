@@ -16,6 +16,7 @@
 #ifndef DOWNLOAD_THREAD_H
 #define DOWNLOAD_THREAD_H
 
+#include <atomic>
 #include <condition_variable>
 #include <curl/curl.h>
 #include <map>
@@ -83,6 +84,7 @@ private:
     void HandleNetworkCheck(int curlRet, long responseCode);
     bool NotifyCancel();
     void StopRequestAndSha256Calculate();
+    void SetRequestFinished(bool finished);
 
     void DoVerify();
     bool CheckBeforeStartDownload();
@@ -99,7 +101,7 @@ private:
 
 private:
     DownloadInfo downloadInfo_;
-    DownloadStatus status_ = DownloadStatus::INIT;
+    std::atomic<DownloadStatus> status_{DownloadStatus::INIT};
     DownloadCallbackInfo callbackInfo_;
     int32_t percent_ = 0;
     int64_t downloadedSize_ = 0;
@@ -110,8 +112,8 @@ private:
     int64_t verifiedSize_ = 0;
     int32_t verifiedPercent_ = 0;
 
-    bool isNeedAutoPause_ = false;
-    bool isNeedCancel_ = false;
+    std::atomic<bool> isNeedAutoPause_{false};
+    std::atomic<bool> isNeedCancel_{false};
     bool isPackageSizeVerified_ = false;
 
     DownloadRequest request_;
@@ -121,12 +123,12 @@ private:
 
     ffrt::recursive_mutex ffrtDownloadThreadMutex_;
 
-    bool isStarted_ = false;
-    bool isRequestFinished_ = false;
+    std::atomic<bool> isStarted_{false};
+    std::atomic<bool> isRequestFinished_{false};
     std::mutex requestConditionMutex_;
     std::condition_variable requestCondition_;
 
-    bool isDisableCallbackFlag_ = false;
+    std::atomic<bool> isDisableCallbackFlag_{false};
     Sha256Utils sha256Utils_;
 
     int64_t downloadStartTime_ = 0;

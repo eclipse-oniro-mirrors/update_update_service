@@ -16,6 +16,7 @@
 #ifndef FIRMWARE_AUTO_UPGRADE_ALARM_MANAGER_H
 #define FIRMWARE_AUTO_UPGRADE_ALARM_MANAGER_H
 
+#include <atomic>
 #include "singleton.h"
 
 #include "constant.h"
@@ -46,11 +47,11 @@ private:
     void CalculateAutoUpgradeTime(AutoUpgradeTimeRefreshType refreshType, int64_t &autoUpgradeTime, int64_t duration);
     void HandleNetChange(int64_t currentTime, int64_t &autoUpgradeTime, int64_t duration);
     void CancelAutoUpgradeAlarm();
-    void UnregisterAlarmTimer(uint64_t &timerId);
+    void UnregisterAlarmTimer();
     bool IsNeedIgnoreDuration(int32_t setDuration, int32_t currentDuration, int32_t minDuration, int32_t maxDuration);
 
 private:
-    uint64_t autoTimerId_ = 0;
+    std::atomic<uint64_t> autoTimerId_ = 0;
     std::shared_ptr<FirmwarePreferencesUtil> preferencesUtil_ = FirmwarePreferencesUtil::GetInstance();
 };
 } // namespace OHOS::UpdateService

@@ -60,10 +60,10 @@ DownloadResult DownloadService::Start(OnDownloadCallback callback, DownloadError
     }
 
     ENGINE_LOGI("Start, taskId %{public}s", taskId_.c_str());
-    onDownloadCallback_ = std::move(callback);
-
+    
     isStopCallback_.store(false, std::memory_order_release);
     std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
+    onDownloadCallback_ = std::move(callback);
     for (const auto &[downloadId, downloadInfo] : serviceDownloadInfoMap_) {
         if (downloadInfo == nullptr) {
             ENGINE_LOGE("start download thread fail, downloadId = %{public}s", downloadId.c_str());
@@ -300,8 +300,11 @@ void DownloadService::Recover(OnDownloadCallback callback)
         ENGINE_LOGE("Recover fail, download info is empty");
         return;
     }
-    onDownloadCallback_ = std::move(callback);
-
+    {
+        std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
+        onDownloadCallback_ = std::move(callback);
+    }
+    
     // 回调Task恢复完成
     NotifyRecoverCompleted();
 }
@@ -401,11 +404,17 @@ void DownloadService::NetChangeToStart()
 void DownloadService::CallbackDownloadProgress(const DownloadCallbackInfo &info)
 {
     // 回调进度
-    if (onDownloadCallback_ == nullptr) {
+    OnDownloadCallback callback = nullptr;
+    {
+        std::lock_guard<ffrt::recursive_mutex> guard(downloadServiceMutex_);
+        callback = onDownloadCallback_;
+    }
+    
+    if (callback == nullptr) {
         ENGINE_LOGE("Callback member is nullptr");
         return;
     }
-    onDownloadCallback_(info);
+    callback(info);
 }
 
 void DownloadService::CallbackUpdateDownloadProgress(DownloadCallbackInfo info)
