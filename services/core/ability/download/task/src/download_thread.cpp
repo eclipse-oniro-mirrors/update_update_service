@@ -118,7 +118,7 @@ DownloadResult DownloadThread::Stop()
 
     ENGINE_LOGI(
         "DownloadThread Stop success, downloadId %{public}s, request finished %{public}s, download started %{public}s",
-        downloadInfo_.downloadId.c_str(), StringUtils::GetBoolStr(isRequestFinished_.load()).c_str(),
+            downloadInfo_.downloadId.c_str(), StringUtils::GetBoolStr(isRequestFinished_.load()).c_str(),
         StringUtils::GetBoolStr(isStarted_.load()).c_str());
     return DownloadResult::SUCCESS;
 }
@@ -127,8 +127,8 @@ void DownloadThread::SetRequestFinished(bool finished)
 {
     // 置位与通知需成对，否则stop()只能等超时
     {
-       std::unique_lock<std::mutex> uniqueLock(requestConditionMutex_);
-       isRequestFinished_.store(finished);
+        std::unique_lock<std::mutex> uniqueLock(requestConditionMutex_);
+        isRequestFinished_.store(finished);
     }
     requestCondition_.notify_all();
 }
