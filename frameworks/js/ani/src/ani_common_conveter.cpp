@@ -159,7 +159,7 @@ ohos::update::VersionComponent AniCommonConverter::Converter(const VersionCompon
         .upgradeAction = Converter(component.upgradeAction),
         .displayVersion = component.displayVersion,
         .innerVersion = component.innerVersion,
-        .size = static_cast<int64_t>(component.size),
+        .size = static_cast<int32_t>(component.size),
         .effectiveMode = Converter(static_cast<EffectiveMode>(component.effectiveMode)),
         .descriptionInfo = Converter(component.descriptionInfo)
     };

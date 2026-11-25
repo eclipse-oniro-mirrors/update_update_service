@@ -51,7 +51,7 @@
     upgradeAction: UpgradeAction;
     displayVersion: String;
     innerVersion: String;
-    size: i64;
+    size: i32;
     effectiveMode: EffectiveMode;
     descriptionInfo: DescriptionInfo;
   }
