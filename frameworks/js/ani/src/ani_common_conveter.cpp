@@ -179,8 +179,8 @@ taihe::array<ohos::update::VersionComponent> AniCommonConverter::Converter(
 ohos::update::UpgradePeriod AniCommonConverter::Converter(const UpgradePeriod &upgradePeriod)
 {
     return {
-        .start = static_cast<int64_t>(upgradePeriod.start),
-        .end = static_cast<int64_t>(upgradePeriod.end)
+        .start = static_cast<int32_t>(upgradePeriod.start),
+        .end = static_cast<int32_t>(upgradePeriod.end)
     };
 }
 

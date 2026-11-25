@@ -105,8 +105,8 @@
   }
 
   struct UpgradePeriod {
-    start: i64;
-    end: i64;
+    start: i32;
+    end: i32;
   }
 
   struct TaskInfo {
